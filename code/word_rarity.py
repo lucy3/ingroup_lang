@@ -2,9 +2,14 @@
 import os
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
+import json
+from collections import Counter
+import operator
 
-WORD_COUNT_DIR = '/data0/lucy/ingroup_vocab/logs/word_counts/'
-SR_DATA_DIR = '/data0/lucy/ingroup_vocab/data/'
+WORD_COUNT_DIR = '/data0/lucy/ingroup_lang/logs/word_counts/'
+PMI_DIR = '/data0/lucy/ingroup_lang/logs/pmi/'
+SR_DATA_DIR = '/data0/lucy/ingroup_lang/data/'
+LOG_DIR = '/data0/lucy/ingroup_lang/logs/'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
@@ -13,20 +18,28 @@ sqlContext = SQLContext(sc)
 def count_words(): 
     """
     Get word counts in each subreddit
+    
+    Currently askreddit is broken
     """
+    log_file = open(LOG_DIR + 'counting_log.temp', 'w')
     for filename in os.listdir(SR_DATA_DIR): 
         if os.path.isdir(SR_DATA_DIR + filename): 
+            if filename == 'askreddit': continue
+            log_file.write(filename + '\n') 
             month = 'RC_2019-05'
             path = SR_DATA_DIR + filename + '/' + month
+            log_file.write('\tReading in textfile\n')
             data = sc.textFile(path)
             data = data.flatMap(lambda line: line.split(" "))
             data = data.map(lambda word: (word, 1))
+            log_file.write('\tReducing by key...\n') 
             data = data.reduceByKey(lambda a, b: a + b)
             df = sqlContext.createDataFrame(data, ['word', 'count'])
             outpath = WORD_COUNT_DIR + filename
-            df.write.format('com.databricks.spark.csv').mode('overwrite').options(header='true').save(outpath)
+            df.write.mode('overwrite').parquet(outpath) 
+    log_file.close() 
 
-def pmi_matrix(): 
+def calculate_pmi(percent_param=0.2): 
     """
     PMI is defined as 
     log(p(word|community) / p(word)) 
@@ -36,18 +49,46 @@ def pmi_matrix():
     as defined in Zhang et al. 2017.
     
     @output: 
-        - matrix of doc x word pmi 
+        - dictionaries for each doc of word : pmi 
         - docs: list of docs in order of matrix
         - words: list of words in order of matrix
     """
-    # load word counts
-    # get total word counts
-    # get sorted vocab 
-    # get sorted subreddit list
-    # get matrix of counts
-    # normalize counts by total word counts
-    # save matrix as pickle
-    pass
+    log_file = open(LOG_DIR + 'pmi.temp', 'w')
+    # TODO: load json of total word counts
+    docs = sorted(os.listdir(WORD_COUNT_DIR))
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        pmi_d = {}
+        if os.path.isdir(WORD_COUNT_DIR + filename): 
+            log_file.write(filename + '\n') 
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict())
+            num_top_p = int(percent_param*len(d))
+            for w in d.most_common(num_top_p): 
+                pmi_d[w] = d[w] / float(total_counts[w])
+            with open(PMI_DIR + filename + '_' + str(percent_param) + '.json', 'w') as outfile: 
+                sorted_d = sorted(x.items(), key=operator.itemgetter(1))
+                for tup in sorted_d: 
+                    outfile.write(tup[0] + '\t' + str(tup[1]) + '\n')
+    log_file.close()
+
+def count_overall_words(): 
+    #all_counts = Counter()
+    log_file = open(LOG_DIR + 'counting_all_log.temp', 'w')
+    rdd1 = sc.emptyRDD()
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        if os.path.isdir(WORD_COUNT_DIR + filename): 
+            log_file.write(filename + '\n') 
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            rdd2 = parquetFile.rdd.map(tuple)
+            rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
+            #d = Counter(parquetFile.toPandas().set_index('word').to_dict())
+            #all_counts += d
+    df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
+    df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
+    #df.write.format('json').save(LOG_DIR + 'total_word_counts', overwrite=True)
+    log_file.close()
+#     with open(LOG_DIR + 'total_word_counts.json', 'w') as outfile: 
+#         json.dump(all_counts, outfile)
 
 def word_tfidf(): 
     """
@@ -72,7 +113,9 @@ def examine_outliers():
     pass
 
 def main(): 
-    count_words()
+    #count_words()
+    count_overall_words()
+    #calculate_pmi()
     sc.stop()
 
 if __name__ == '__main__':

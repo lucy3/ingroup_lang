@@ -2,8 +2,8 @@ from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
 import json
 
-DATA = '/data0/lucy/ingroup_vocab/data/'
-LOG_DIR = '/data0/lucy/ingroup_vocab/logs/'
+DATA = '/data0/lucy/ingroup_lang/data/'
+LOG_DIR = '/data0/lucy/ingroup_lang/logs/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 
 conf = SparkConf()
@@ -38,7 +38,7 @@ def count_unique_users():
     data = data.map(lambda x: (x[1], 1)).reduceByKey(lambda n1, n2: n1 + n2)
     df = sqlContext.createDataFrame(data, ['subreddit', 'num_commentors'])
     outpath = LOG_DIR + 'commentor_counts'
-    df.write.format('com.databricks.spark.csv').mode('overwrite').options(header='true').save(outpath)
+    df.coalesce(1).write.format('com.databricks.spark.csv').mode('overwrite').options(header='true').save(outpath)
     
 def main(): 
     count_unique_users()

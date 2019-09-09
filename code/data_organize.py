@@ -13,7 +13,7 @@ import os
 from pyspark import SparkConf, SparkContext
 from collections import Counter
 
-DATA = '/data0/lucy/ingroup_vocab/data/'
+DATA = '/data0/lucy/ingroup_lang/data/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 conf = SparkConf()
 sc = SparkContext(conf=conf)
@@ -23,7 +23,7 @@ reddits = set()
 def get_comment(line): 
     comment = json.loads(line)
     text = comment['body'].lower()
-    # remove urls
+    # remove urls - I don't think this is working...
     text = re.sub(r'^https?:\/\/.*[\r\n]*', '', text, flags=re.MULTILINE)
     # remove puncutation
     text = punct_regex.sub('', text)
@@ -43,7 +43,8 @@ def save_doc(item):
             
 def get_subreddit(line): 
     comment = json.loads(line)
-    if 'subreddit' in comment and 'body' in comment: 
+    if 'subreddit' in comment and 'body' in comment and \
+	    comment['body'] != '[deleted]' and comment['body'] != '[removed]': 
         return (comment['subreddit'].lower(), 1)
     else: 
         return (None, 0)
@@ -89,7 +90,7 @@ def create_subreddit_docs():
     data = data.foreach(save_doc)
 
 def main(): 
-    #get_top_subreddits(n=500)
+    get_top_subreddits(n=500)
     #create_subreddit_docs()
     sc.stop()
 
