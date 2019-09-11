@@ -32,8 +32,8 @@ with open(SUBREDDITS, 'r') as inputfile:
         reddits.add(line.strip().lower())
 global MONTH
 MONTH = 'RC_2019-05'
-path = DATA + MONTH
-#path = DATA + 'tinyData'
+#path = DATA + MONTH
+path = DATA + 'tinyData'
 data = sc.textFile(path)
 data = data.filter(subreddit_of_interest)
 data = data.map(get_language)
