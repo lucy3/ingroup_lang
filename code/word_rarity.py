@@ -30,6 +30,7 @@ def count_words():
             path = SR_DATA_DIR + filename + '/' + month
             log_file.write('\tReading in textfile\n')
             data = sc.textFile(path)
+            # TODO better tokenize and lowercase 
             data = data.flatMap(lambda line: line.split(" "))
             data = data.map(lambda word: (word, 1))
             log_file.write('\tReducing by key...\n') 
