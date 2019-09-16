@@ -2,7 +2,10 @@
 Functions for organizing or reformatting 
 Reddit data.
 
-Python 2.7
+Python 2.7, 
+
+though if you use stanfordnlp you should
+use Python 3. 
 """
 import json
 import time
@@ -12,9 +15,13 @@ import string
 import os
 from pyspark import SparkConf, SparkContext
 from collections import Counter
+#from stanfordnlp.server import CoreNLPClient
 
-DATA = '/global/scratch/lucy3_li/ingroup_lang/data/'
-SR_FOLDER = '/global/scratch/lucy3_li/ingroup_lang/subreddits/'
+ROOT = '/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+DATA = ROOT + 'data/'
+SR_FOLDER = ROOT + 'subreddits/'
+SR_FOLDER2 = ROOT + 'subreddits2/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
 
@@ -30,6 +37,9 @@ def get_comment(line):
                   '', text, flags=re.MULTILINE)
     # remove new lines
     text = text.replace('\n', ' ').replace('\r', ' ')
+    # remove removed comments
+    if text.strip() == '[deleted]' or text.strip() == '[removed]': 
+        text = ''
     return (comment['subreddit'].lower(), text)
     
 def subreddit_of_interest(line): 
@@ -46,7 +56,7 @@ def save_doc(item):
 def get_subreddit(line): 
     comment = json.loads(line)
     if 'subreddit' in comment and 'body' in comment and \
-	    comment['body'] != '[deleted]' and comment['body'] != '[removed]': 
+	    comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
         return (comment['subreddit'].lower(), 1)
     else: 
         return (None, 0)
@@ -89,17 +99,47 @@ def create_subreddit_docs():
             os.makedirs(path)
     global MONTH
     MONTH = 'RC_2019-05'
-    #path = DATA + MONTH
-    path = DATA + 'tinyData'
+    path = DATA + MONTH
+    #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
     data = data.map(get_comment)
     data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
     data = data.foreach(save_doc)
+    
+def process_comment(line): 
+    if line.strip().lower() == '[deleted]' or \
+        line.strip().lower() == '[removed]':
+        return ''
+    ann = client.annotate(line)
+    new_line = ''
+    for s in ann.sentence: 
+        for t in s.token: 
+            new_line += t.word.lower() + ' '
+    return new_line
+    
+def tokenize_docs(): 
+    """
+    Lowercases and tokenizes documents.
+    Takes about as long as the non-Spark version so I'm not currently using
+    this. 
+
+    """
+    MONTH = 'RC_2019-05'
+    global client
+    client = CoreNLPClient(annotators=['tokenize','ssplit'], timeout=50000000, threads=18, memory='64G')
+    for folder_name in os.listdir(SR_FOLDER): 
+        if os.path.isdir(SR_FOLDER + folder_name):
+            path = SR_FOLDER + folder_name + '/' + MONTH
+            data = sc.textFile(path)
+            data = data.map(process_comment)
+            data.coalesce(1).saveAsTextFile(SR_FOLDER2 + folder_name)
+            break
 
 def main(): 
     #get_top_subreddits(n=500)
     create_subreddit_docs()
+    #tokenize_docs()
     sc.stop()
 
 if __name__ == '__main__':

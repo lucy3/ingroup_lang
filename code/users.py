@@ -1,10 +1,12 @@
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
 import json
+import os
 
-DATA = '/data0/lucy/ingroup_lang/data/'
-LOG_DIR = '/data0/lucy/ingroup_lang/logs/'
-SUBREDDITS = DATA + 'subreddit_list.txt'
+ROOT = '/data0/lucy/ingroup_lang/'
+DATA = ROOT + 'data/'
+SR_FOLDER = ROOT + 'subreddits/'
+LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
@@ -24,9 +26,9 @@ def get_user(line):
         return (None, None)
     
 def count_unique_users(): 
-    with open(SUBREDDITS, 'r') as inputfile: 
-        for line in inputfile: 
-            reddits.add(line.strip().lower())
+    for folder_name in os.listdir(SR_FOLDER): 
+        if os.path.isdir(SR_FOLDER + folder_name): 
+            reddits.add(folder_name)
     global MONTH
     MONTH = 'RC_2019-05'
     path = DATA + MONTH

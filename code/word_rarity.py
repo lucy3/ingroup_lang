@@ -5,15 +5,19 @@ from pyspark.sql import SQLContext
 import json
 from collections import Counter
 import operator
+import re, string
 
-WORD_COUNT_DIR = '/data0/lucy/ingroup_lang/logs/word_counts/'
-PMI_DIR = '/data0/lucy/ingroup_lang/logs/pmi/'
-SR_DATA_DIR = '/data0/lucy/ingroup_lang/data/'
-LOG_DIR = '/data0/lucy/ingroup_lang/logs/'
+ROOT = '/data0/lucy/ingroup_lang/'
+WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
+PMI_DIR = ROOT + 'logs/pmi/'
+SR_DATA_DIR = ROOT + 'subreddits/'
+LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
 sqlContext = SQLContext(sc)
+
+regex = re.compile('[%s]' % re.escape(string.punctuation))
 
 def count_words(): 
     """
@@ -30,8 +34,9 @@ def count_words():
             path = SR_DATA_DIR + filename + '/' + month
             log_file.write('\tReading in textfile\n')
             data = sc.textFile(path)
-            # TODO better tokenize and lowercase 
-            data = data.flatMap(lambda line: line.split(" "))
+            data = data.flatMap(lambda line: line.lower().split(" "))
+            # TODO: tokenization step should remove punctuation from words so delete this later
+            data = data.map(lambda word: regex.sub('', word))
             data = data.map(lambda word: (word, 1))
             log_file.write('\tReducing by key...\n') 
             data = data.reduceByKey(lambda a, b: a + b)
@@ -62,18 +67,44 @@ def calculate_pmi(percent_param=0.2):
         if os.path.isdir(WORD_COUNT_DIR + filename): 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
-            d = Counter(parquetFile.toPandas().set_index('word').to_dict())
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
-                pmi_d[w] = d[w] / float(total_counts[w])
+                pmi_d[w[0]] = d[w[0]] / float(total_counts[w[0]])
             with open(PMI_DIR + filename + '_' + str(percent_param) + '.json', 'w') as outfile: 
                 sorted_d = sorted(x.items(), key=operator.itemgetter(1))
                 for tup in sorted_d: 
                     outfile.write(tup[0] + '\t' + str(tup[1]) + '\n')
     log_file.close()
+    
+def count_overall_words_small(percent_param=0.2): 
+    subreddits = ['justnomil', 'gardening', 'todayilearned', 'vegan', 'brawlstars']
+    vocab = set()
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        if os.path.isdir(WORD_COUNT_DIR + filename): 
+            if filename not in subreddits: continue
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+            num_top_p = int(percent_param*len(d))
+            for w in d.most_common(num_top_p): 
+                vocab.add(w[0])
+    log_file = open(LOG_DIR + 'counting_all_log.temp', 'w')
+    rdd1 = sc.emptyRDD()
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        if os.path.isdir(WORD_COUNT_DIR + filename): 
+            log_file.write(filename + '\n') 
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            rdd2 = parquetFile.rdd.map(tuple)
+            # filter to only words in our vocab
+            rdd2 = rdd2.filter(lambda tup: tup[0] in vocab)
+            rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
+    df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
+    df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
+    log_file.close()
 
 def count_overall_words(): 
     #all_counts = Counter()
+    # TODO: do only for words in a subset of 5 subreddits
     log_file = open(LOG_DIR + 'counting_all_log.temp', 'w')
     rdd1 = sc.emptyRDD()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
@@ -82,7 +113,7 @@ def count_overall_words():
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             rdd2 = parquetFile.rdd.map(tuple)
             rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
-            #d = Counter(parquetFile.toPandas().set_index('word').to_dict())
+            #d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
             #all_counts += d
     df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
     df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
@@ -115,7 +146,7 @@ def examine_outliers():
 
 def main(): 
     #count_words()
-    count_overall_words()
+    count_overall_words_small()
     #calculate_pmi()
     sc.stop()
 
