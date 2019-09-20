@@ -7,7 +7,7 @@ from collections import Counter
 import operator
 import re, string
 
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 SR_DATA_DIR = ROOT + 'subreddits/'
@@ -90,6 +90,7 @@ def count_overall_words_small(percent_param=0.2):
                 vocab.add(w[0])
     log_file = open(LOG_DIR + 'counting_all_log.temp', 'w')
     rdd1 = sc.emptyRDD()
+    all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename): 
             log_file.write(filename + '\n') 
@@ -98,8 +99,12 @@ def count_overall_words_small(percent_param=0.2):
             # filter to only words in our vocab
             rdd2 = rdd2.filter(lambda tup: tup[0] in vocab)
             rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
-    df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
-    df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+            all_counts += d
+    with open(LOG_DIR + 'total_word_counts.json', 'w') as outfile: 
+        json.dump(all_counts, outfile)
+    #df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
+    #df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
     log_file.close()
 
 def count_overall_words(): 
