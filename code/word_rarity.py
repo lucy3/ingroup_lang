@@ -7,10 +7,11 @@ from collections import Counter
 import operator
 import re, string
 
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
-SR_DATA_DIR = ROOT + 'subreddits/'
+SR_DATA_DIR = ROOT + 'subreddits2/'
 LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
@@ -30,13 +31,10 @@ def count_words():
         if os.path.isdir(SR_DATA_DIR + filename): 
             if filename == 'askreddit': continue
             log_file.write(filename + '\n') 
-            month = 'RC_2019-05'
-            path = SR_DATA_DIR + filename + '/' + month
+            path = SR_DATA_DIR + filename 
             log_file.write('\tReading in textfile\n')
             data = sc.textFile(path)
-            data = data.flatMap(lambda line: line.lower().split(" "))
-            # TODO: tokenization step should remove punctuation from words so delete this later
-            data = data.map(lambda word: regex.sub('', word))
+            data = data.flatMap(lambda line: line.split(' '))
             data = data.map(lambda word: (word, 1))
             log_file.write('\tReducing by key...\n') 
             data = data.reduceByKey(lambda a, b: a + b)
@@ -74,10 +72,11 @@ def calculate_pmi(percent_param=0.2):
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
                 pmi_d[w[0]] = d[w[0]] / float(total_counts[w[0]])
-            with open(PMI_DIR + filename + '_' + str(percent_param) + '.json', 'w') as outfile: 
-                sorted_d = sorted(x.items(), key=operator.itemgetter(1))
+            with open(PMI_DIR + filename + '_' + str(percent_param) + '.txt', 'w') as outfile: 
+                sorted_d = sorted(pmi_d.items(), key=operator.itemgetter(1))
+                outfile.write('word\tpmi\tcount\n')
                 for tup in sorted_d: 
-                    outfile.write(tup[0] + '\t' + str(tup[1]) + '\n')
+                    outfile.write(tup[0].encode('utf-8', 'replace') + '\t' + str(tup[1]) + '\t' + str(d[tup[0]]) + '\n')
     log_file.close()
     
 def count_overall_words_small(percent_param=0.2): 
@@ -153,9 +152,9 @@ def examine_outliers():
     pass
 
 def main(): 
-    #count_words()
+    count_words()
     #count_overall_words_small()
-    calculate_pmi()
+    #calculate_pmi()
     sc.stop()
 
 if __name__ == '__main__':
