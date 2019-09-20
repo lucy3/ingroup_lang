@@ -60,11 +60,14 @@ def calculate_pmi(percent_param=0.2):
         - words: list of words in order of matrix
     """
     log_file = open(LOG_DIR + 'pmi.temp', 'w')
-    # TODO: load json of total word counts
+    with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
+        total_counts = json.load(infile)
     docs = sorted(os.listdir(WORD_COUNT_DIR))
+    subreddits = ['justnomil', 'gardening', 'todayilearned', 'vegan', 'brawlstars'] 
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         pmi_d = {}
         if os.path.isdir(WORD_COUNT_DIR + filename): 
+            if filename not in subreddits: continue
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
@@ -151,8 +154,8 @@ def examine_outliers():
 
 def main(): 
     #count_words()
-    count_overall_words_small()
-    #calculate_pmi()
+    #count_overall_words_small()
+    calculate_pmi()
     sc.stop()
 
 if __name__ == '__main__':
