@@ -27,20 +27,19 @@ def count_words():
     Currently askreddit is broken
     """
     log_file = open(LOG_DIR + 'counting_log.temp', 'w')
-    for filename in os.listdir(SR_DATA_DIR): 
-        if os.path.isdir(SR_DATA_DIR + filename): 
-            if filename == 'askreddit': continue
-            log_file.write(filename + '\n') 
-            path = SR_DATA_DIR + filename 
-            log_file.write('\tReading in textfile\n')
-            data = sc.textFile(path)
-            data = data.flatMap(lambda line: line.split(' '))
-            data = data.map(lambda word: (word, 1))
-            log_file.write('\tReducing by key...\n') 
-            data = data.reduceByKey(lambda a, b: a + b)
-            df = sqlContext.createDataFrame(data, ['word', 'count'])
-            outpath = WORD_COUNT_DIR + filename
-            df.write.mode('overwrite').parquet(outpath) 
+    for filename in os.listdir(SR_DATA_DIR):  
+	if filename == 'askreddit': continue
+	log_file.write(filename + '\n') 
+	path = SR_DATA_DIR + filename 
+	log_file.write('\tReading in textfile\n')
+	data = sc.textFile(path)
+	data = data.flatMap(lambda line: line.split(' '))
+	data = data.map(lambda word: (word, 1))
+	log_file.write('\tReducing by key...\n') 
+	data = data.reduceByKey(lambda a, b: a + b)
+	df = sqlContext.createDataFrame(data, ['word', 'count'])
+	outpath = WORD_COUNT_DIR + filename
+	df.write.mode('overwrite').parquet(outpath) 
     log_file.close() 
 
 def calculate_pmi(percent_param=0.2): 
