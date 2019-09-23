@@ -60,7 +60,8 @@ def calculate_pmi(percent_param=0.2):
     with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
         total_counts = json.load(infile)
     docs = sorted(os.listdir(WORD_COUNT_DIR))
-    subreddits = ['justnomil', 'gardening', 'todayilearned', 'vegan', 'brawlstars'] 
+    subreddits = ['justnomil_RC_2019-05.txt', 'gardening_RC_2019-05.txt', 
+		'todayilearned_RC_2019-05.txt', 'vegan_RC_2019-05.txt', 'brawlstars_RC_2019-05.txt'] 
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         pmi_d = {}
         if os.path.isdir(WORD_COUNT_DIR + filename): 
@@ -79,17 +80,21 @@ def calculate_pmi(percent_param=0.2):
     log_file.close()
     
 def count_overall_words_small(percent_param=0.2): 
-    subreddits = ['justnomil', 'gardening', 'todayilearned', 'vegan', 'brawlstars']
+    subreddits = ['justnomil_RC_2019-05.txt', 'gardening_RC_2019-05.txt', 
+		'todayilearned_RC_2019-05.txt', 'vegan_RC_2019-05.txt', 'brawlstars_RC_2019-05.txt']
     vocab = set()
+    log_file = open(LOG_DIR + 'counting_all_log.temp', 'w') 
+    log_file.write("Getting vocab...\n")
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename): 
             if filename not in subreddits: continue
+            log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
                 vocab.add(w[0])
-    log_file = open(LOG_DIR + 'counting_all_log.temp', 'w')
+    log_file.write("Vocab size:", len(vocab), "\n")
     rdd1 = sc.emptyRDD()
     all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
@@ -153,7 +158,7 @@ def examine_outliers():
 def main(): 
     #count_words()
     count_overall_words_small()
-    #calculate_pmi()
+    calculate_pmi()
     sc.stop()
 
 if __name__ == '__main__':
