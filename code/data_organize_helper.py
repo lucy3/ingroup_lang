@@ -14,7 +14,8 @@ def main():
     '''
     Time it takes to run
     - line by line: 400.775
-    - 
+    - 95 hours total for all files. TODO: write a bash script using 
+    Stanford CoreNLP java command line that runs faster  
     '''
     start = time.time()
     MONTH = 'RC_2019-05'
