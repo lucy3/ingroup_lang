@@ -7,8 +7,8 @@ from collections import Counter
 import operator
 import re, string
 
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 SR_DATA_DIR = ROOT + 'subreddits2/'
@@ -151,8 +151,8 @@ def examine_outliers():
     pass
 
 def main(): 
-    count_words()
-    #count_overall_words_small()
+    #count_words()
+    count_overall_words_small()
     #calculate_pmi()
     sc.stop()
 
