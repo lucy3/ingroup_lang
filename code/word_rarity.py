@@ -6,9 +6,10 @@ import json
 from collections import Counter
 import operator
 import re, string
+import csv
 
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-#ROOT = '/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 SR_DATA_DIR = ROOT + 'subreddits2/'
@@ -72,11 +73,13 @@ def calculate_pmi(percent_param=0.2):
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
                 pmi_d[w[0]] = d[w[0]] / float(total_counts[w[0]])
-            with open(PMI_DIR + filename + '_' + str(percent_param) + '.txt', 'w') as outfile: 
+            new_filename = filename.replace('.txt', '')
+            with open(PMI_DIR + new_filename + '_' + str(percent_param) + '.csv', 'w') as outfile: 
                 sorted_d = sorted(pmi_d.items(), key=operator.itemgetter(1))
-                outfile.write('word\tpmi\tcount\n')
+                writer = csv.writer(outfile)
+                writer.writerow(['word', 'pmi', 'count'])
                 for tup in sorted_d: 
-                    outfile.write(tup[0].encode('utf-8', 'replace') + '\t' + str(tup[1]) + '\t' + str(d[tup[0]]) + '\n')
+                    writer.writerow([tup[0].encode('utf-8', 'replace'), str(tup[1]), str(d[tup[0]])])
     log_file.close()
     
 def count_overall_words_small(percent_param=0.2): 
@@ -157,7 +160,7 @@ def examine_outliers():
 
 def main(): 
     #count_words()
-    count_overall_words_small()
+    #count_overall_words_small()
     calculate_pmi()
     sc.stop()
 
