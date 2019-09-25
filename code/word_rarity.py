@@ -61,12 +61,9 @@ def calculate_pmi(percent_param=0.2):
     with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
         total_counts = json.load(infile)
     docs = sorted(os.listdir(WORD_COUNT_DIR))
-    subreddits = ['justnomil_RC_2019-05.txt', 'gardening_RC_2019-05.txt', 
-		'todayilearned_RC_2019-05.txt', 'vegan_RC_2019-05.txt', 'brawlstars_RC_2019-05.txt'] 
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         pmi_d = {}
         if os.path.isdir(WORD_COUNT_DIR + filename): 
-            if filename not in subreddits: continue
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
@@ -80,24 +77,22 @@ def calculate_pmi(percent_param=0.2):
                 writer.writerow(['word', 'pmi', 'count'])
                 for tup in sorted_d: 
                     writer.writerow([tup[0].encode('utf-8', 'replace'), str(tup[1]), str(d[tup[0]])])
+    log_file.write("DONE\n")
     log_file.close()
     
-def count_overall_words_small(percent_param=0.2): 
-    subreddits = ['justnomil_RC_2019-05.txt', 'gardening_RC_2019-05.txt', 
-		'todayilearned_RC_2019-05.txt', 'vegan_RC_2019-05.txt', 'brawlstars_RC_2019-05.txt']
+def count_overall_words(percent_param=0.2): 
     vocab = set()
     log_file = open(LOG_DIR + 'counting_all_log.temp', 'w') 
     log_file.write("Getting vocab...\n")
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename): 
-            if filename not in subreddits: continue
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
                 vocab.add(w[0])
-    log_file.write("Vocab size:", len(vocab), "\n")
+    log_file.write("Vocab size:" + str(len(vocab)) + "\n")
     rdd1 = sc.emptyRDD()
     all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
@@ -112,29 +107,10 @@ def count_overall_words_small(percent_param=0.2):
             all_counts += d
     with open(LOG_DIR + 'total_word_counts.json', 'w') as outfile: 
         json.dump(all_counts, outfile)
+    log_file.write("DONE\n")
     #df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
     #df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
     log_file.close()
-
-def count_overall_words(): 
-    #all_counts = Counter()
-    # TODO: do only for words in a subset of 5 subreddits
-    log_file = open(LOG_DIR + 'counting_all_log.temp', 'w')
-    rdd1 = sc.emptyRDD()
-    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
-        if os.path.isdir(WORD_COUNT_DIR + filename): 
-            log_file.write(filename + '\n') 
-            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
-            rdd2 = parquetFile.rdd.map(tuple)
-            rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
-            #d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
-            #all_counts += d
-    df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
-    df.write.mode('overwrite').parquet(LOG_DIR + 'total_word_counts') 
-    #df.write.format('json').save(LOG_DIR + 'total_word_counts', overwrite=True)
-    log_file.close()
-#     with open(LOG_DIR + 'total_word_counts.json', 'w') as outfile: 
-#         json.dump(all_counts, outfile)
 
 def word_tfidf(): 
     """
@@ -151,16 +127,15 @@ def word_tfidf():
     """
     pass
 
-def examine_outliers(): 
+def niche_disem():
     """
-    Look at words with highest values in each row in
-    document x word matrix and see if they make sense.
+    Altmann's metric, but for subreddits instead of users
     """
     pass
 
 def main(): 
     #count_words()
-    #count_overall_words_small()
+    count_overall_words()
     calculate_pmi()
     sc.stop()
 
