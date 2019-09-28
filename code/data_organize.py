@@ -35,7 +35,13 @@ def get_comment(line):
     @input: 
          - a dictionary containing a comment
     @output: 
-         - a tuple (subreddit name: comment text) 
+         - a tuple (subreddit name: comment text)
+    
+    Usernames start with u/, can have underscores, dashes, alphanumeric letters.
+    Subreddits start with r/, can have underscores and alphanumberic letters. 
+    Example of how the number regex works: 
+    a = 'his table34 is -3492, -998, and 3.0.4 and 08:30 and 23-389! calcul8 this ple3se'
+    a = 'his table34 is -NUM, -NUM, and NUM.NUM.NUM and NUM:NUM and NUM-NUM! calcul8 this ple3se' 
     """
     comment = json.loads(line)
     text = comment['body']
@@ -47,10 +53,11 @@ def get_comment(line):
     # remove removed comments
     if text.strip() == '[deleted]' or text.strip() == '[removed]': 
         text = ''
-    # remove usernames and subreddit names
-    text = re.sub('u/[A-Za-z_0-9-]+', 'u/USER', a)
-    text = re.sub('r/[A-Za-z_0-9]+', 'r/SUBREDDIT', b)
-    # TODO: remove numbers 
+    # standardize usernames and subreddit names
+    text = re.sub('u/[A-Za-z_0-9-]+', 'u/USER', text)
+    text = re.sub('r/[A-Za-z_0-9]+', 'r/SUBREDDIT', text)
+    # replace numbers except when they occur with alphabetic characters
+    text = re.sub('(?<![A-Za-z])(\d+)(?![A-Za-z])', '<num0-9>', text) 
     return (comment['subreddit'].lower(), text)
     
 def subreddit_of_interest(line): 
@@ -110,8 +117,8 @@ def create_subreddit_docs():
             os.makedirs(path)
     global MONTH
     MONTH = 'RC_2019-05'
-    path = DATA + MONTH
-    #path = DATA + 'tinyData'
+    #path = DATA + MONTH
+    path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
     data = data.map(get_comment)
