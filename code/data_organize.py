@@ -30,6 +30,13 @@ sc = SparkContext(conf=conf)
 reddits = set()
 
 def get_comment(line): 
+    """
+    Called by create_subreddit_docs() 
+    @input: 
+         - a dictionary containing a comment
+    @output: 
+         - a tuple (subreddit name: comment text) 
+    """
     comment = json.loads(line)
     text = comment['body']
     # remove urls
@@ -40,6 +47,10 @@ def get_comment(line):
     # remove removed comments
     if text.strip() == '[deleted]' or text.strip() == '[removed]': 
         text = ''
+    # remove usernames and subreddit names
+    text = re.sub('u/[A-Za-z_0-9-]+', 'u/USER', a)
+    text = re.sub('r/[A-Za-z_0-9]+', 'r/SUBREDDIT', b)
+    # TODO: remove numbers 
     return (comment['subreddit'].lower(), text)
     
 def subreddit_of_interest(line): 
@@ -121,9 +132,7 @@ def process_comment(line):
 def tokenize_docs(): 
     """
     Lowercases and tokenizes documents.
-    Takes about as long as the non-Spark version so I'm not currently using
-    this. 
-
+    NOTE: Takes about as long as the non-Spark version so not being used. 
     """
     MONTH = 'RC_2019-05'
     global client
@@ -139,7 +148,6 @@ def tokenize_docs():
 def main(): 
     #get_top_subreddits(n=500)
     create_subreddit_docs()
-    #tokenize_docs()
     sc.stop()
 
 if __name__ == '__main__':
