@@ -57,7 +57,7 @@ def get_comment(line):
     text = re.sub('u/[A-Za-z_0-9-]+', 'u/USER', text)
     text = re.sub('r/[A-Za-z_0-9]+', 'r/SUBREDDIT', text)
     # replace numbers except when they occur with alphabetic characters
-    text = re.sub('(?<![A-Za-z])(\d+)(?![A-Za-z])', '<num0-9>', text) 
+    text = re.sub('(?<![A-Za-z0-9])(\d+)(?![A-Za-z0-9])', '<num0-9>', text) 
     return (comment['subreddit'].lower(), text)
     
 def subreddit_of_interest(line): 
@@ -117,8 +117,8 @@ def create_subreddit_docs():
             os.makedirs(path)
     global MONTH
     MONTH = 'RC_2019-05'
-    #path = DATA + MONTH
-    path = DATA + 'tinyData'
+    path = DATA + MONTH
+    #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
     data = data.map(get_comment)

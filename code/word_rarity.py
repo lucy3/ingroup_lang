@@ -27,6 +27,8 @@ def count_words():
     
     Currently askreddit is broken
     """
+    # TODO: rewrite using conll format and attempt to include askreddit! 
+    # TODO: remove empty character '' from counts
     log_file = open(LOG_DIR + 'counting_log.temp', 'w')
     for filename in os.listdir(SR_DATA_DIR):  
 	if filename == 'askreddit': continue
