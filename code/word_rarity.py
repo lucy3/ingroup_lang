@@ -27,23 +27,42 @@ def count_words():
     
     Currently askreddit is broken
     """
-    # TODO: rewrite using conll format and attempt to include askreddit! 
-    # TODO: remove empty character '' from counts
     log_file = open(LOG_DIR + 'counting_log.temp', 'w')
     for filename in os.listdir(SR_DATA_DIR):  
-	if filename == 'askreddit': continue
-	log_file.write(filename + '\n') 
-	path = SR_DATA_DIR + filename 
-	log_file.write('\tReading in textfile\n')
-	data = sc.textFile(path)
-	data = data.flatMap(lambda line: line.split(' '))
-	data = data.map(lambda word: (word, 1))
-	log_file.write('\tReducing by key...\n') 
-	data = data.reduceByKey(lambda a, b: a + b)
-	df = sqlContext.createDataFrame(data, ['word', 'count'])
-	outpath = WORD_COUNT_DIR + filename
-	df.write.mode('overwrite').parquet(outpath) 
-    log_file.close() 
+        log_file.write(filename + '\n') 
+        path = SR_DATA_DIR + filename + '/RC_2019-05.conll'
+        # in some cases the file is missing 
+        # because it was big and was segmented
+        if not os.path.exists(path): continue
+        log_file.write('\tReading in textfile\n')
+        data = sc.textFile(path)
+        data = data.filter(lambda line: line.strip() != '')
+        data = data.map(lambda line: (line.strip().lower(), 1))
+        log_file.write('\tReducing by key...\n') 
+        data = data.reduceByKey(lambda a, b: a + b)
+        df = sqlContext.createDataFrame(data, ['word', 'count'])
+        outpath = WORD_COUNT_DIR + filename
+        df.write.mode('overwrite').parquet(outpath) 
+    log_file.close()
+
+def merge_counts(): 
+    """
+    Merge counts for large files. 
+    """
+    large_files = ['askreddit', 'amitheasshole', 'politics']
+    log_file = open(LOG_DIR + 'merge_counts.temp', 'w')
+    for sr in large_files: 
+        total_counts = Counter()
+        for filename in os.listdir(WORD_COUNT_DIR): 
+            if filename.startswith(sr + '@'): 
+                log_file.write(filename + '\n')
+                parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+                d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+                total_counts += d
+        rdd = sc.parallelize(list(total_counts.iteritems()))
+        df = sqlContext.createDataFrame(rdd, ['word', 'count'])
+        df.write.mode('overwrite').parquet(WORD_COUNT_DIR + sr) 
+    log_file.close()
 
 def calculate_pmi(percent_param=0.2): 
     """
@@ -65,7 +84,7 @@ def calculate_pmi(percent_param=0.2):
     docs = sorted(os.listdir(WORD_COUNT_DIR))
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         pmi_d = {}
-        if os.path.isdir(WORD_COUNT_DIR + filename): 
+        if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
@@ -87,7 +106,7 @@ def count_overall_words(percent_param=0.2):
     log_file = open(LOG_DIR + 'counting_all_log.temp', 'w') 
     log_file.write("Getting vocab...\n")
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
-        if os.path.isdir(WORD_COUNT_DIR + filename): 
+        if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
@@ -98,7 +117,7 @@ def count_overall_words(percent_param=0.2):
     rdd1 = sc.emptyRDD()
     all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
-        if os.path.isdir(WORD_COUNT_DIR + filename): 
+        if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             rdd2 = parquetFile.rdd.map(tuple)
@@ -137,7 +156,8 @@ def niche_disem():
 
 def main(): 
     #count_words()
-    count_overall_words()
+    #merge_counts()
+    #count_overall_words()
     calculate_pmi()
     sc.stop()
 

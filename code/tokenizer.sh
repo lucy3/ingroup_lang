@@ -1,4 +1,4 @@
-#!/bin/bash
+!/bin/bash
 
 for filename in /data0/lucy/ingroup_lang/subreddits/*; do
         justfile=$(basename $filename)
