@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --job-name=what
+#
+#SBATCH --partition=savio
+#
+#SBATCH --time=06:00:00
+#
+#SBATCH --nodes=1
+
+module load java spark/2.1.0
+
+source /global/home/groups/allhands/bin/spark_helper.sh
+
+spark-start
+
+spark-submit --master $SPARK_URL --conf local.dir=/global/scratch/lucy3_li/ /global/scratch/lucy3_li/ingroup_lang/code/word_rarity.py
+
+spark-stop
