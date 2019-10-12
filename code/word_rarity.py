@@ -7,6 +7,7 @@ from collections import Counter
 import operator
 import re, string
 import csv
+import math
 
 #ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 ROOT = '/data0/lucy/ingroup_lang/'
@@ -68,16 +69,10 @@ def calculate_pmi(percent_param=0.2):
     log(frequency of word in community c / frequency of word in 
     all c's we are looking at)
     as defined in Zhang et al. 2017.
-    
-    @output: 
-        - dictionaries for each doc of word : pmi 
-        - docs: list of docs in order of matrix
-        - words: list of words in order of matrix
     """
     log_file = open(LOG_DIR + 'pmi.temp', 'w')
     with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
         total_counts = json.load(infile)
-    docs = sorted(os.listdir(WORD_COUNT_DIR))
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         pmi_d = {}
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
@@ -110,17 +105,16 @@ def count_overall_words(percent_param=0.2):
             for w in d.most_common(num_top_p): 
                 vocab.add(w[0])
     log_file.write("Vocab size:" + str(len(vocab)) + "\n")
-    rdd1 = sc.emptyRDD()
+    all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
-            rdd2 = parquetFile.rdd.map(tuple)
+            count_rdd = parquetFile.rdd.map(tuple)
             # filter to only words in our vocab
-            rdd2 = rdd2.filter(lambda tup: tup[0] in vocab)
-            rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
-    df = sqlContext.createDataFrame(rdd1, ['word', 'count'])
-    all_counts = Counter(df.toPandas().set_index('word').to_dict()['count'])
+            count_rdd = count_rdd.filter(lambda tup: tup[0] in vocab)
+            d = Counter(count_rdd.collectAsMap())
+            all_counts += d
     with open(LOG_DIR + 'total_word_counts.json', 'w') as outfile: 
         json.dump(all_counts, outfile)
     log_file.write("DONE\n")
@@ -164,15 +158,13 @@ def word_tfidf(percent_param=0.2):
     number of documents, or subreddits. tf is
     term frequency in document and df is
     number of documents the term appears in.
-
-    @output: 
-        - matrix of doc x word tf-idf'
-        - docs: list of docs in order of matrix
-        - words: list of words in order of matrix
     """
     log_file = open(LOG_DIR + 'tfidf.temp', 'w')
     # load document frequency of words
-    docs = sorted(os.listdir(WORD_COUNT_DIR))
+    with open(LOG_DIR + 'doc_freqs.json', 'r') as infile: 
+        doc_freqs = json.load(infile)
+    docs = sorted(os.listdir(SR_DATA_DIR))
+    N = float(len(docs))
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         tfidf_d = {}
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
@@ -181,7 +173,7 @@ def word_tfidf(percent_param=0.2):
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
-                tfidf_d[w[0]] = 0
+                tfidf_d[w[0]] = (1.0 + math.log(d[w[0]], 10))*math.log(N/doc_freqs[w[0]], 10)
             new_filename = filename.replace('.txt', '')
             with open(TFIDF_DIR + new_filename + '_' + str(percent_param) + '.csv', 'w') as outfile: 
                 sorted_d = sorted(tfidf_d.items(), key=operator.itemgetter(1))
@@ -195,6 +187,7 @@ def word_tfidf(percent_param=0.2):
 def niche_disem(percent_param=0.2):
     """
     Altmann's metric, but for subreddits instead of users
+    
     """
     pass
 
