@@ -8,8 +8,8 @@ import operator
 import re, string
 import csv
 
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/old_word_counts/' # TODO: Change this!!!
 PMI_DIR = ROOT + 'logs/pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
@@ -201,7 +201,8 @@ def niche_disem(percent_param=0.2):
 def main(): 
     #count_words()
     #merge_counts()
-    count_overall_words()
+    #count_overall_words()
+    count_document_freq()
     #calculate_pmi()
     sc.stop()
 
