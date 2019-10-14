@@ -9,9 +9,9 @@ import re, string
 import csv
 import math
 
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-#ROOT = '/data0/lucy/ingroup_lang/'
-WORD_COUNT_DIR = ROOT + 'logs/old_word_counts/' # TODO: Change this!!!
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
+WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
 SR_DATA_DIR = ROOT + 'subreddits4/'
@@ -133,19 +133,17 @@ def count_document_freq(percent_param=0.2):
             for w in d.most_common(num_top_p): 
                 vocab.add(w[0])
     log_file.write("Vocab size:" + str(len(vocab)) + "\n")
-    rdd1 = sc.emptyRDD()
     all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
-            rdd2 = parquetFile.rdd.map(tuple)
+            count_rdd = parquetFile.rdd.map(tuple)
             # filter to only words in our vocab
-            rdd2 = rdd2.filter(lambda tup: tup[0] in vocab)
-            rdd2 = rdd2.map(lambda tup: (tup[0], 1))
-            rdd1 = rdd2.union(rdd1).reduceByKey(lambda x,y : x+y)
-    df = sqlContext.createDataFrame(rdd1, ['word', 'doc_freq'])
-    all_counts = Counter(df.toPandas().set_index('word').to_dict()['doc_freq'])
+            count_rdd = count_rdd.filter(lambda tup: tup[0] in vocab)
+            count_rdd = count_rdd.map(lambda tup: (tup[0], 1))
+            d = Counter(count_rdd.collectAsMap())
+            all_counts += d
     with open(LOG_DIR + 'doc_freqs.json', 'w') as outfile: 
         json.dump(all_counts, outfile)
     log_file.write("DONE\n") 
@@ -193,10 +191,10 @@ def niche_disem(percent_param=0.2):
 
 def main(): 
     #count_words()
-    #merge_counts()
     #count_overall_words()
-    count_document_freq()
+    #count_document_freq()
     #calculate_pmi()
+    word_tfidf()
     sc.stop()
 
 if __name__ == '__main__':

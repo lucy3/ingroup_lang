@@ -7,6 +7,8 @@ ROOT = '/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 SR_FOLDER = ROOT + 'subreddits/'
 LOG_DIR = ROOT + 'logs/'
+SUBREDDITS = DATA + 'subreddit_list.txt'
+REMOVED_SRS = DATA + 'non_english_sr.txt'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
@@ -42,8 +44,52 @@ def count_unique_users():
     outpath = LOG_DIR + 'commentor_counts'
     df.coalesce(1).write.format('com.databricks.spark.csv').mode('overwrite').options(header='true').save(outpath)
     
+def get_subreddit(line): 
+    comment = json.loads(line)
+    if 'subreddit' in comment and 'body' in comment and \
+        comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
+        return (comment['subreddit'].lower(), 1)
+    else: 
+        return (None, 0)
+    
+def user_activity(): 
+    """
+    Where activity is calculated as 
+    total comments / num of commentors
+    """
+    non_english_reddits = set()
+    with open(REMOVED_SRS, 'r') as inputfile: 
+        for line in inputfile: 
+            non_english_reddits.add(line.strip().lower())
+    with open(SUBREDDITS, 'r') as inputfile: 
+        for line in inputfile: 
+            sr = line.strip().lower()
+            if sr not in non_english_reddits: 
+                reddits.add(sr)
+    global MONTH
+    MONTH = 'RC_2019-05'
+    path = DATA + MONTH
+    #path = DATA + 'tinyData'
+    data = sc.textFile(path)
+    data = data.filter(subreddit_of_interest)
+    subreddits = data.map(get_subreddit)
+    # total num of comments per subreddit
+    subreddits = subreddits.reduceByKey(lambda n1, n2: n1 + n2) 
+    total_com = subreddits.collectAsMap()
+    outfile = open(LOG_DIR + 'commentor_activity', 'w')
+    # TODO: need to read commentor_counts as a pandas dataframe 
+    with open(LOG_DIR + 'commentor_counts', 'r') as infile: 
+        for line in infile: 
+            if line.startswith('subreddit'): continue
+            contents = line.strip().split()
+            sr = contents[0]
+            c = float(contents[1])
+            outfile.write(sr + ',' + total_com[sr] / c + '\n')
+    outfile.close()
+
 def main(): 
-    count_unique_users()
+    #count_unique_users()
+    user_activity()
     sc.stop()
 
 if __name__ == '__main__':
