@@ -192,8 +192,8 @@ def niche_disem(percent_param=0.2):
 def main(): 
     #count_words()
     #count_overall_words()
-    #count_document_freq()
     #calculate_pmi()
+    #count_document_freq()
     word_tfidf()
     sc.stop()
 

@@ -78,13 +78,15 @@ def user_activity():
     total_com = subreddits.collectAsMap()
     outfile = open(LOG_DIR + 'commentor_activity', 'w')
     # TODO: need to read commentor_counts as a pandas dataframe 
-    with open(LOG_DIR + 'commentor_counts', 'r') as infile: 
+    commentor_path = LOG_DIR + '/commentor_counts/part-00000-f83d5d87-c50d-4d5a-a560-e978e85e0af8-c000.csv'
+    outfile.write('subreddit,activity\n')
+    with open(commentor_path, 'r') as infile: 
         for line in infile: 
-            if line.startswith('subreddit'): continue
-            contents = line.strip().split()
+            if line.startswith('subreddit,'): continue
+            contents = line.strip().split(',')
             sr = contents[0]
             c = float(contents[1])
-            outfile.write(sr + ',' + total_com[sr] / c + '\n')
+            outfile.write(sr + ',' + str(total_com[sr] / c) + '\n')
     outfile.close()
 
 def main(): 
