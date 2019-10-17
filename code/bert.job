@@ -12,10 +12,9 @@
 #SBATCH --gres=gpu:1
 
 
-#source /global/home/users/lucy3_li/anaconda2/bin/activate /global/home/users/lucy3_li/anaconda2/envs/nlp
+source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
 
-module load python/3.5 pytorch/0.3.1-py3.5-cuda9.0
 
 python bert_vectors.py
 
-#source /global/home/users/lucy3_li/anaconda2/bin/deactivate
+source /global/scratch/lucy3_li/anaconda3/bin/deactivate
