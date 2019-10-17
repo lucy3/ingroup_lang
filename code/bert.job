@@ -11,10 +11,11 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
 
-module load python/3.6 pytorch/1.0.0-py36-cuda9.0
 
-source /global/home/users/lucy3_li/anaconda2/bin/activate /global/home/users/lucy3_li/anaconda2/envs/nlp
+#source /global/home/users/lucy3_li/anaconda2/bin/activate /global/home/users/lucy3_li/anaconda2/envs/nlp
+
+module load python/3.5 pytorch/0.3.1-py3.5-cuda9.0
 
 python bert_vectors.py
 
-source /global/home/users/lucy3_li/anaconda2/bin/deactivate
+#source /global/home/users/lucy3_li/anaconda2/bin/deactivate
