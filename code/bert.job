@@ -11,7 +11,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
 
-module load python/3.6 pytorch
+module load python/3.6 pytorch/1.0.0-py36-cuda9.0
 
 source /global/home/users/lucy3_li/anaconda2/bin/activate /global/home/users/lucy3_li/anaconda2/envs/nlp
 
