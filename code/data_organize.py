@@ -127,6 +127,8 @@ def save_user_doc(item):
 def create_subreddit_docs(): 
     '''
     Create a document for each subreddit by month
+    Lines that start with @@#USER#@@_ are usernames
+    whose comments on that subreddit then follow. 
     '''
     non_english_reddits = set()
     with open(REMOVED_SRS, 'r') as inputfile: 
@@ -148,7 +150,9 @@ def create_subreddit_docs():
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
-    data = data.map(get_comment)
+    data = data.map(get_comment_user)
+    data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
+    data = data.map(lambda tup: (tup[0][0], '@@#USER#@@_' + tup[0][1] + '\n' + tup[1]))
     data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
     data = data.foreach(save_doc)
     
@@ -206,8 +210,8 @@ def tokenize_docs():
 
 def main(): 
     #get_top_subreddits(n=500)
-    #create_subreddit_docs()
-    create_sr_user_docs() 
+    create_subreddit_docs()
+    #create_sr_user_docs() 
     sc.stop()
 
 if __name__ == '__main__':
