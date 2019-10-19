@@ -1,0 +1,19 @@
+#!/bin/bash
+# Job name:
+#SBATCH --job-name=savio_gpu_test#
+# Partition:
+#SBATCH --partition=savio2_gpu
+#
+# Wall clock limit: (this runs for 2 minutes max)
+#SBATCH --time=00:02:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --gres=gpu:1
+
+
+source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
+
+python bert_vectors.py
+
+source /global/scratch/lucy3_li/anaconda3/bin/deactivate
