@@ -26,7 +26,7 @@ https://mccormickml.com/2019/05/14/BERT-word-embeddings-tutorial/
 
 class BertEmbeddings():
     def __init__(self):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=False, do_basic_tokenize=False)
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.model.eval()
         self.model.to(device)
@@ -40,27 +40,47 @@ class BertEmbeddings():
         '''
         sentences = []
         i = 0
+        curr_user = None
         with open(inputfile, 'r') as infile: 
             for line in infile: 
-                contents = line.strip().split(' ')
-                text = ' '.join(contents[1:])
-                sentences.append((contents[0], "[CLS] " + text + " [SEP]"))
-                if i > 100: break
-                i += 1
+                contents = line.strip()
+                if contents.startswith('@@#USER#@@_'): 
+                    curr_user = contents
+                else: 
+                    sentences.append((curr_user, "[CLS] " + contents + " [SEP]"))
+                    if i > 10: break
+                    i += 1
         return sentences
 
     def get_batches(self, sentences, max_batch): 
-        marked_text = sentences[0][1]
-        tokenized_text = self.tokenizer.tokenize(marked_text)
-        indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_text)
-        segments_ids = [1] * len(tokenized_text)
-        tokens_tensor = torch.tensor([indexed_tokens]).to(device)
-        segments_tensors = torch.tensor([segments_ids]).to(device)
-        return tokens_tensor, tokenized_text
+        all_data = [] # indexed tokens, or word IDs
+        all_words = [] # tokenized_text, or original words
+        all_masks = [] 
+        all_users = []
+        for sentence in sentences: 
+            marked_text = sentences[1]
+            print(marked_text)
+            tokenized_text = self.tokenizer.tokenize(marked_text)
+            indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_text)
+            all_data.append(indexed_tokens)
+            all_words.append(tokenized_text) 
+            all_masks.append(np.ones(len(indexed_tokens)))
+            all_users.append(sentences[0])
 
-    def get_embeddings(self, tokens_tensor, tokenized_text): 
+        lengths = np.array([len(l) for l in all_data])
+        ordering = np.argsort(lengths)
+        ordered_data = [None for i in range(len(all_data))]
+        ordered_words = [None for i in range(len(all_data))]
+        ordered_masks = [None for i in range(len(all_data))]
+        ordered_users = [None for i in range(len(all_data))]
+        
+        return 
+
+    def get_embeddings(self, indexed_tokens, tokenized_text): 
+        tokens_tensor = indexed_tokens.to(device)
+        # TODO to(device) for other inputs into self.model as well
         with torch.no_grad():
-            _, _, encoded_layers = self.model(tokens_tensor)
+            _, _, encoded_layers = self.model(tokens_tensor, attention_mask=TODO, token_type_ids=None)
         print("Batch size, tokens, hidden layer size:", encoded_layers[0].size())
         token_embeddings = [] 
         for token_i in range(len(tokenized_text)):
@@ -71,28 +91,14 @@ class BertEmbeddings():
             token_embeddings.append(hidden_layers)
         # concatenate last four layers
         rep = [torch.cat((layer[0], layer[1], layer[2], layer[3]), 0) for layer in token_embeddings]
-        # representation for a word is rep[word_index_in_sentence]
-        print("Similarity between \'bank\' in \'bank vault\' and \'river bank\'")
-        print(cosine_similarity(rep[6].cpu().reshape(1, -1), rep[19].cpu().reshape(1, -1)))
-        print("Similarity between \'bank\' in \'bank robber\' and \'bank vault\'")
-        print(cosine_similarity(rep[10].cpu().reshape(1, -1), rep[6].cpu().reshape(1, -1)))
+        for i in range(len(rep)):
+            # TODO: check if in subreddit's vocabulary, or maybe just save everything?
+            # TODO: keep track of user as well
+            print(tokenized_text[i], rep[i].cpu().reshape(1, -1))
 
 if __name__ == "__main__":
-    # TODO get input into correct format 
     filename = '/global/scratch/lucy3_li/ingroup_lang/subreddits_month/vegan/RC_2019-05'
     embeddings_model = BertEmbeddings()
     marked_text = embeddings_model.read_sentences(filename)
-    tokens_tensor, tokenized_text = embeddings_model.get_batches(marked_text, batch_size)
-    embeddings_model.get_embeddings(tokens_tensor, tokenized_text)
-    '''
-    # look at get_batches() in bamman-group-code
-    # for each sentence get [tokens], [indexed tokens], [segment IDs], [attention mask], [batched transforms]
-    # order the batches
-    # get ordering 
-    
-    # run model on batches
-    # for every token, get last four layers, concatenate
-    # handle the wordpiece stuff somehow
-    # filter out non-top-20% vocab
-    # save as userID, word, representation
-    '''
+    indexed_tokens, tokenized_text = embeddings_model.get_batches(marked_text, batch_size)
+    embeddings_model.get_embeddings(indexed_tokens, tokenized_text)
