@@ -68,8 +68,9 @@ def compare_word_across_subreddits(subreddit_list):
     word = 'fire'
     color_map = {}
     color_map_rev = {}
-    for sr in subreddit_list: 
-        color = np.random.rand(3,)
+    colors = np.random.rand(len(subreddit_list),)
+    for i, sr in enumerate(subreddit_list): 
+        color = colors[i]
         color_map[sr] = color
         color_map_rev[color] = sr 
         data = sc.textfile(VEC_FOLDER + sr)
@@ -96,7 +97,7 @@ def compare_word_across_subreddits(subreddit_list):
 
 def main():
     #sanity_check()
-    compare_words_across_subreddits(['vegan', 'financialindependence'])
+    compare_word_across_subreddits(['vegan', 'financialindependence'])
     sc.stop()
 
 if __name__ == '__main__': 
