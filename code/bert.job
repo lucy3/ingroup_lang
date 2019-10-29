@@ -4,8 +4,8 @@
 # Partition:
 #SBATCH --partition=savio2_gpu
 #
-# Wall clock limit: (this runs for 2 minutes max)
-#SBATCH --time=05:00:00
+# Wall clock limit:
+#SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2

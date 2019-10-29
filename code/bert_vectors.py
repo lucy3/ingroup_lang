@@ -35,15 +35,16 @@ class BertEmbeddings():
 
     def read_sentences(self, inputfile): 
         '''
-        The input file is formatted as 
-        userID sentence
-        where each line is a single input sentence. 
+        The input file is formatted 
+        where each line is a single input sentence
+        or a username. Usernames come before their sentences.  
         Each input file is a single subreddit. 
         '''
         print("Reading sentences...")
         sentences = []
         i = 0
         curr_user = None
+        line_number = 0
         with open(inputfile, 'r') as infile: 
             for line in infile: 
                 contents = line.strip()
@@ -52,8 +53,9 @@ class BertEmbeddings():
                 else:
                     sent_tok = sent_tokenize(contents)
                     for sent in sent_tok: 
-                        sentences.append((curr_user, "[CLS] " + sent + " [SEP]"))
+                        sentences.append((str(line_number) + '_' + curr_user, "[CLS] " + sent + " [SEP]"))
                         i += 1
+                line_number += 1
         return sentences
 
     def get_batches(self, sentences, max_batch): 
@@ -64,7 +66,7 @@ class BertEmbeddings():
         all_masks = [] 
         all_users = []
         for sentence in sentences: 
-            marked_text = sentence[1]
+            marked_text = sentence[1] 
             tokenized_text = self.tokenizer.tokenize(marked_text)
             tokenized_text = tokenized_text[:512]
             indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_text)
@@ -146,16 +148,16 @@ class BertEmbeddings():
 
 if __name__ == "__main__":
     root_path = '/global/scratch/lucy3_li/ingroup_lang/'
-    subreddit = 'vegan'
-    filename = root_path + 'subreddits_month/' + subreddit + '/RC_2019-05'
-    start = time.time()
-    embeddings_model = BertEmbeddings()
-    sentences = embeddings_model.read_sentences(filename)
-    time1 = time.time()
-    print("TOTAL TIME:", time1 - start)
-    batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
-    time2 = time.time()
-    print("TOTAL TIME:", time2 - time1)
-    outfile = root_path + 'logs/bert_vectors/' + subreddit
-    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
-    print("TOTAL TIME:", time.time() - time2)
+    for subreddit in ['vegan', 'financialindependence', 'keto', 'applyingtocollege', 'fashionreps']: 
+        filename = root_path + 'subreddits_month/' + subreddit + '/RC_2019-05'
+        start = time.time()
+        embeddings_model = BertEmbeddings()
+        sentences = embeddings_model.read_sentences(filename)
+        time1 = time.time()
+        print("TOTAL TIME:", time1 - start)
+        batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
+        time2 = time.time()
+        print("TOTAL TIME:", time2 - time1)
+        outfile = root_path + 'logs/bert_vectors/' + subreddit
+        embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
+        print("TOTAL TIME:", time.time() - time2)
