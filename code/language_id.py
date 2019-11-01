@@ -32,8 +32,7 @@ def id_langs():
         for line in inputfile: 
             reddits.add(line.strip().lower())
     global MONTH
-    MONTH = 'RC_2019-05'
-    path = DATA + MONTH
+    path = DATA + 'RC_sample'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)

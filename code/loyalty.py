@@ -16,8 +16,7 @@ reddits = set()
 ROOT = '/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOG_DIR = ROOT + 'logs/'
-POSTS = DATA + 'RS_2019-05'
-COMMENTS = DATA + 'RC_2019-05'
+COMMENTS = DATA + 'RC_all'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
 

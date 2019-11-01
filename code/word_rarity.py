@@ -14,7 +14,7 @@ ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
-SR_DATA_DIR = ROOT + 'subreddits4/'
+SR_DATA_DIR = ROOT + 'subreddits4/' # TODO check if this is still the case
 LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
@@ -30,7 +30,7 @@ def count_words():
     log_file = open(LOG_DIR + 'counting_log.temp', 'w')
     for filename in os.listdir(SR_DATA_DIR):  
         log_file.write(filename + '\n') 
-        path = SR_DATA_DIR + filename + '/RC_2019-05'
+        path = SR_DATA_DIR + filename + '/RC_sample'
         log_file.write('\tReading in textfile\n')
         data = sc.textFile(path)
         data = data.filter(lambda line: line.strip() != '')
@@ -44,7 +44,8 @@ def count_words():
 
 def merge_counts(): 
     """
-    Merge counts for large files. 
+    Merge counts for large files.
+    This was only necessary when we weren't sampling comments.  
     """
     large_files = ['askreddit', 'amitheasshole', 'politics']
     log_file = open(LOG_DIR + 'merge_counts.temp', 'w')

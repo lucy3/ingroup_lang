@@ -15,6 +15,7 @@ import string
 import os
 from pyspark import SparkConf, SparkContext
 from collections import Counter
+import random
 #from stanfordnlp.server import CoreNLPClient
 
 ROOT = '/data0/lucy/ingroup_lang/'
@@ -91,6 +92,21 @@ def get_subreddit(line):
     else: 
         return (None, 0)
 
+def get_subreddit_json(line): 
+    comment = json.loads(line) 
+    if 'subreddit' in comment and 'body' in comment and \
+	    comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
+        return (comment['subreddit'].lower(), [line])
+    else: 
+        return (None, [])
+
+
+def count_comments_for_one_subreddit(sr): 
+    path = DATA + 'RC_all'
+    data = sc.textFile(path)
+    data = data.filter(lambda line: json.loads(line)['subreddit'].lower() == sr) 
+    print("NUMBER OF COMMENTS IN " + sr.upper() + " IS " + str(data.count()))
+
 def get_top_subreddits(n=300): 
     '''
     Get the top n subreddits by number
@@ -98,7 +114,7 @@ def get_top_subreddits(n=300):
     Takes ~30 min for 1 month on redwood
     using --master 'local[*]'
     '''
-    path = DATA + 'RC_2019-05'
+    path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.map(get_subreddit)
@@ -112,7 +128,7 @@ def get_top_subreddits(n=300):
 def save_doc(item): 
     if item[0] is not None:
         path = SR_FOLDER_MONTH + item[0] + '/'
-        with open(path + MONTH, 'w') as file:
+        with open(path + 'RC_sample', 'w') as file:
             file.write(item[1].encode('utf-8', 'replace'))
             
 def save_user_doc(item): 
@@ -121,7 +137,7 @@ def save_user_doc(item):
     text = item[1]
     if sr is not None:
         path = SR_FOLDER + sr + '/'
-        with open(path + MONTH + '_' + user, 'w') as file:
+        with open(path + 'RC_sample_' + user, 'w') as file:
             file.write(text.encode('utf-8', 'replace'))
     
 def create_subreddit_docs(): 
@@ -144,9 +160,8 @@ def create_subreddit_docs():
         path = SR_FOLDER_MONTH + sr + '/'
         if not os.path.exists(path): 
             os.makedirs(path)
-    global MONTH
-    MONTH = 'RC_2019-05'
-    path = DATA + MONTH
+
+    path = DATA + 'RC_sample'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
@@ -157,6 +172,11 @@ def create_subreddit_docs():
     data = data.foreach(save_doc)
     
 def create_sr_user_docs(): 
+    """
+    Creates one document per user per subreddit. 
+    It's possible that this method requires too much runtime
+    when it comes to I/O a gazillion tiny little docs while tokenizing. 
+    """
     non_english_reddits = set()
     with open(REMOVED_SRS, 'r') as inputfile: 
         for line in inputfile: 
@@ -171,9 +191,8 @@ def create_sr_user_docs():
         path = SR_FOLDER + sr + '/'
         if not os.path.exists(path): 
             os.makedirs(path)
-    global MONTH
-    MONTH = 'RC_2019-05'
-    path = DATA + MONTH
+
+    path = DATA + 'RC_sample'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
@@ -197,7 +216,7 @@ def tokenize_docs():
     Lowercases and tokenizes documents.
     NOTE: Takes about as long as the non-Spark version so not being used. 
     """
-    MONTH = 'RC_2019-05'
+    MONTH = 'RC_sample'
     global client
     client = CoreNLPClient(annotators=['tokenize','ssplit'], timeout=50000000, threads=18, memory='64G')
     for folder_name in os.listdir(SR_FOLDER): 
@@ -208,9 +227,41 @@ def tokenize_docs():
             data.coalesce(1).saveAsTextFile(SR_FOLDER2 + folder_name)
             break
 
+def sample_lines(tup): 
+    sr = tup[0]
+    lines = tup[1]
+    new_lines = random.sample(lines, 80000)
+    return (sr, new_lines)
+
+def sample_subreddits(): 
+    with open(SUBREDDITS, 'r') as inputfile: 
+        for line in inputfile: 
+            sr = line.strip().lower()
+            reddits.add(sr)
+    random.seed(0)
+    path = DATA + "RC_all"
+    data = sc.textFile(path)
+    data = data.filter(subreddit_of_interest)
+    data = data.map(get_subreddit_json)  
+    data = data.reduceByKey(lambda n1, n2: n1 + n2) 
+    data = data.map(sample_lines) 
+    sr_lines = data.collectAsMap()
+    outpath = DATA + "RC_sample"
+    outfile = open(outpath, 'w') 
+    for sr in sr_lines: 
+        if sr is None: continue
+        print("WRITING " + sr.upper() + " TO FILE") 
+        lines = sr_lines[sr]
+        print("NUMBER OF LINES:", len(lines))
+        for l in lines: 
+            outfile.write(l + '\n') 
+    outfile.close()
+
 def main(): 
     #get_top_subreddits(n=500)
-    create_subreddit_docs()
+    #count_comments_for_one_subreddit('coys')
+    sample_subreddits()
+    #create_subreddit_docs()
     #create_sr_user_docs() 
     sc.stop()
 

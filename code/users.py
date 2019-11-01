@@ -31,9 +31,7 @@ def count_unique_users():
     for folder_name in os.listdir(SR_FOLDER): 
         if os.path.isdir(SR_FOLDER + folder_name): 
             reddits.add(folder_name)
-    global MONTH
-    MONTH = 'RC_2019-05'
-    path = DATA + MONTH
+    path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
@@ -66,9 +64,7 @@ def user_activity():
             sr = line.strip().lower()
             if sr not in non_english_reddits: 
                 reddits.add(sr)
-    global MONTH
-    MONTH = 'RC_2019-05'
-    path = DATA + MONTH
+    path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
@@ -77,7 +73,6 @@ def user_activity():
     subreddits = subreddits.reduceByKey(lambda n1, n2: n1 + n2) 
     total_com = subreddits.collectAsMap()
     outfile = open(LOG_DIR + 'commentor_activity', 'w')
-    # TODO: need to read commentor_counts as a pandas dataframe 
     commentor_path = LOG_DIR + '/commentor_counts/part-00000-f83d5d87-c50d-4d5a-a560-e978e85e0af8-c000.csv'
     outfile.write('subreddit,activity\n')
     with open(commentor_path, 'r') as infile: 
@@ -90,7 +85,7 @@ def user_activity():
     outfile.close()
 
 def main(): 
-    #count_unique_users()
+    count_unique_users()
     user_activity()
     sc.stop()
 

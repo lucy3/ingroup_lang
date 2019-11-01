@@ -63,7 +63,6 @@ def get_top_user_sets(tup):
     return (tup[0], vocab)
 
 def users_of_interest(line, user_counts): 
-    # get access to broadcast variable
     comment = json.loads(line)
     author = comment["author"].lower()
     subreddit = comment['subreddit'].lower()
@@ -84,12 +83,9 @@ def create_network_inputs():
             sr = line.strip().lower()
             if sr not in non_english_reddits: 
                 reddits.add(sr)
-    global MONTH
-    MONTH = 'RC_2019-05'
-    path = DATA + MONTH
+    path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
-    log_file.write("BEFORE USER FILTER:" + str(data.count()) + '\n')
 
     # filter by top subreddits and top users
     data = data.filter(subreddit_of_interest)
