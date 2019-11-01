@@ -55,7 +55,7 @@ def sanity_check():
     X_embedded = TSNE(n_components=2).fit_transform(X)
     print('POST-TSNE SHAPE:', X_embedded.shape)
     fig, ax = plt.subplots()
-    s = ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.5)
+    s = ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.5, marker='.')
     legend_elements = [Line2D([0], [0], marker='o', color='w', label='soy',
                           markerfacecolor='g', markersize=10), 
                        Line2D([0], [0], marker='o', color='w', label='dish',
@@ -63,41 +63,44 @@ def sanity_check():
     ax.legend(handles=legend_elements)
     plt.savefig('../logs/bert_sanity_check_' + subreddit + '.png')
 
-def compare_word_across_subreddits(subreddit_list): 
+def compare_word_across_subreddits(subreddit_list, word): 
     X = []
-    word = 'fire'
+    colors = []
     color_map = {}
     color_map_rev = {}
-    colors = np.random.rand(len(subreddit_list),)
+    color_options = ['b', 'g', 'r', 'y', 'c', 'm']
     for i, sr in enumerate(subreddit_list): 
-        color = colors[i]
+        color = color_options[i]
         color_map[sr] = color
         color_map_rev[color] = sr 
-        data = sc.textfile(VEC_FOLDER + sr)
+        data = sc.textFile(VEC_FOLDER + sr)
         data = data.filter(lambda x: get_word_subset(x, word))
         data = data.map(get_word_vectors)
         vecs = data.collect()
         for item in vecs: 
-            words.append(item[0])
             X.append(item[1])
             colors.append(color_map[sr])
-    print("WORDS:", set(words))
     X = np.array(X)
     X_embedded = TSNE(n_components=2).fit_transform(X)
     print ("POST-TSNE SHAPE:", X_embedded.shape)
     fig, ax = plt.subplots()
-    ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.5)
+    ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.5, marker='.')
     legend_elements = []
-    for color in color_map: 
+    for color in color_map_rev: 
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label=color_map_rev[color], 
                                    markerfacecolor=color, markersize=10))
     ax.legend(handles=legend_elements)
+    if word == '.': word = 'period'
+    if word == '!': word = 'exclaimmark'
     plt.savefig('../logs/bert_viz_single_word_' + word + '.png')
  
 
 def main():
     #sanity_check()
-    compare_word_across_subreddits(['vegan', 'financialindependence'])
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'london')
     sc.stop()
 
 if __name__ == '__main__': 
