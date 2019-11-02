@@ -18,9 +18,10 @@ from collections import Counter
 import random
 #from stanfordnlp.server import CoreNLPClient
 
-ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
+LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
 SR_FOLDER = ROOT + 'subreddits/'
 SR_FOLDER2 = ROOT + 'subreddits2/'
@@ -230,6 +231,8 @@ def tokenize_docs():
 def sample_lines(tup): 
     sr = tup[0]
     lines = tup[1]
+    assert len(lines) < 80000,"OH NO THE SUBREDDIT " + sr + \
+	" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
     new_lines = random.sample(lines, 80000)
     return (sr, new_lines)
 
@@ -242,8 +245,10 @@ def sample_subreddits():
     path = DATA + "RC_all"
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
+    # TODO: fix this
     data = data.map(get_subreddit_json)  
     data = data.reduceByKey(lambda n1, n2: n1 + n2) 
+    data = data.filter(lambda tup: tup[0] is not None)
     data = data.map(sample_lines) 
     sr_lines = data.collectAsMap()
     outpath = DATA + "RC_sample"
@@ -257,9 +262,28 @@ def sample_subreddits():
             outfile.write(l + '\n') 
     outfile.close()
 
+def count_comments_all(): 
+    with open(SUBREDDITS, 'r') as inputfile: 
+        for line in inputfile: 
+            sr = line.strip().lower()
+            reddits.add(sr)
+    random.seed(0)
+    path = DATA + "RC_all"
+    data = sc.textFile(path)
+    data = data.filter(subreddit_of_interest)
+    data = data.map(get_subreddit)  
+    data = data.reduceByKey(lambda n1, n2: n1 + n2)
+    c = Counter(data.collectAsMap())
+    outfile = open(LOGS + "sr_comment_counts", 'w')
+    for sr in c.most_common():
+       if sr[0] is None: continue 
+       outfile.write(sr[0] + '\t' + str(sr[1]) + '\n') 
+    outfile.close()
+
 def main(): 
     #get_top_subreddits(n=500)
     #count_comments_for_one_subreddit('coys')
+    #count_comments_all()
     sample_subreddits()
     #create_subreddit_docs()
     #create_sr_user_docs() 
