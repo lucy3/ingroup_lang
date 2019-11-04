@@ -16,7 +16,7 @@ def count_comments():
     comment_count = Counter()
     for sr in os.listdir(SR_FOLDER_MONTH): 
         num_lines = 0
-        with open(SR_FOLDER_MONTH + sr + '/RC_2019-05', 'r') as infile: 
+        with open(SR_FOLDER_MONTH + sr + '/RC_sample', 'r') as infile: 
             for line in infile: 
                 if line.startswith('@@#USER#@@_'): continue
                 num_lines += 1
