@@ -4,9 +4,11 @@ Note: just run Spark locally
 
 from pyspark import SparkConf, SparkContext
 import numpy as np
-from sklearn.manifold import TSNE
+#from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from MulticoreTSNE import MulticoreTSNE as TSNE
+import random
 
 VEC_FOLDER = '/global/scratch/lucy3_li/ingroup_lang/logs/bert_vectors/'
 
@@ -69,22 +71,26 @@ def compare_word_across_subreddits(subreddit_list, word):
     color_map = {}
     color_map_rev = {}
     color_options = ['b', 'g', 'r', 'y', 'c', 'm']
+    print("GETTING VECTORS FOR WORD:", word)
     for i, sr in enumerate(subreddit_list): 
         color = color_options[i]
         color_map[sr] = color
         color_map_rev[color] = sr 
         data = sc.textFile(VEC_FOLDER + sr)
         data = data.filter(lambda x: get_word_subset(x, word))
+        total = data.count()
+        if total > 100: 
+            data = data.sample(False, 100.0/total, 0)
         data = data.map(get_word_vectors)
         vecs = data.collect()
         for item in vecs: 
             X.append(item[1])
             colors.append(color_map[sr])
     X = np.array(X)
-    X_embedded = TSNE(n_components=2).fit_transform(X)
-    print ("POST-TSNE SHAPE:", X_embedded.shape)
+    X_embedded = TSNE(n_components=2, n_jobs=-1).fit_transform(X)
+    print("POST-TSNE SHAPE:", X_embedded.shape)
     fig, ax = plt.subplots()
-    ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.5, marker='.')
+    ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.3, marker='.')
     legend_elements = []
     for color in color_map_rev: 
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label=color_map_rev[color], 
@@ -97,10 +103,11 @@ def compare_word_across_subreddits(subreddit_list, word):
 
 def main():
     #sanity_check()
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'london')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'fire')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'sick')
     sc.stop()
 
 if __name__ == '__main__': 

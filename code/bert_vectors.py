@@ -8,6 +8,9 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.tokenize import sent_tokenize
 import time
+import xml.etree.ElementTree as ET
+
+sem_eval_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
 
 batch_size=32
 dropout_rate=0.25
@@ -32,6 +35,22 @@ class BertEmbeddings():
         self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.model.eval()
         self.model.to(device)
+    
+    def read_semeval_sentences(self): 
+        '''
+        This input file is a little wonky; see sem eval readme for more details. 
+        The output of sentences contains a list of tuples
+        where the first tuple is the instance id and the second is the sentence.  
+        '''
+        print("Reading sem eval sentences...") 
+        sentences = []
+        tree = ET.parse(sem_eval_data)
+        root = tree.getroot()
+        for instance in root: 
+            ID = instance.attrib['id'] + '_' + instance.attrib['lemma'] + '_' + instance.attrib['token']
+            sent = instance.text
+            sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
 
     def read_sentences(self, inputfile): 
         '''
@@ -146,7 +165,7 @@ class BertEmbeddings():
                             ' '.join(str(n) for n in rep.cpu().numpy().reshape(1, -1)[0]) + '\n')
         ofile.close()
 
-if __name__ == "__main__":
+def run_bert_on_reddit(): 
     root_path = '/global/scratch/lucy3_li/ingroup_lang/'
     for subreddit in ['vegan', 'financialindependence', 'keto', 'applyingtocollege', 'fashionreps']: 
         filename = root_path + 'subreddits_month/' + subreddit + '/RC_2019-05'
@@ -161,3 +180,25 @@ if __name__ == "__main__":
         outfile = root_path + 'logs/bert_vectors/' + subreddit
         embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
         print("TOTAL TIME:", time.time() - time2)
+
+def run_bert_on_semeval():
+    root_path = '/global/scratch/lucy3_li/ingroup_lang/' 
+    start = time.time()
+    embeddings_model = BertEmbeddings()
+    sentences = embeddings_model.read_semeval_sentences()
+    time1 = time.time()
+    print("TOTAL TIME:", time1 - start)
+    batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
+    time2 = time.time()
+    print("TOTAL TIME:", time2 - time1)
+    outfile = root_path + 'logs/semeval2013_bert'
+    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
+    print("TOTAL TIME:", time.time() - time2)
+
+ 
+def main(): 
+    #run_bert_on_reddit()
+    run_bert_on_semeval()
+
+if __name__ == "__main__":
+    main()
