@@ -18,8 +18,8 @@ from collections import Counter
 import random
 #from stanfordnlp.server import CoreNLPClient
 
-#ROOT = '/data0/lucy/ingroup_lang/'
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -231,7 +231,7 @@ def tokenize_docs():
 def sample_lines(tup): 
     sr = tup[0]
     lines = tup[1]
-    assert len(lines) < 80000,"OH NO THE SUBREDDIT " + sr + \
+    assert len(lines) >= 80000,"OH NO THE SUBREDDIT " + sr + \
 	" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
     new_lines = random.sample(lines, 80000)
     return (sr, new_lines)
@@ -245,7 +245,6 @@ def sample_subreddits():
     path = DATA + "RC_all"
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
-    # TODO: fix this
     data = data.map(get_subreddit_json)  
     data = data.reduceByKey(lambda n1, n2: n1 + n2) 
     data = data.filter(lambda tup: tup[0] is not None)
