@@ -79,8 +79,8 @@ def compare_word_across_subreddits(subreddit_list, word):
         data = sc.textFile(VEC_FOLDER + sr)
         data = data.filter(lambda x: get_word_subset(x, word))
         total = data.count()
-        if total > 100: 
-            data = data.sample(False, 100.0/total, 0)
+        if total > 500: 
+            data = data.sample(False, 500.0/total, 0)
         data = data.map(get_word_vectors)
         vecs = data.collect()
         for item in vecs: 
@@ -103,9 +103,11 @@ def compare_word_across_subreddits(subreddit_list, word):
 
 def main():
     #sanity_check()
-    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
-    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
-    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
+    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'london')
+
     compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'fire')
     compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'sick')
     sc.stop()

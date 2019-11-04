@@ -18,8 +18,8 @@ from collections import Counter
 import random
 #from stanfordnlp.server import CoreNLPClient
 
-ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -125,6 +125,15 @@ def get_top_subreddits(n=300):
     with open(SUBREDDITS, 'w') as outfile: 
         for sr in sr_counts.most_common(n): 
             outfile.write(sr[0] + '\n') 
+
+def sample_lines(tup): 
+    sr = tup[0]
+    lines = tup[1]
+    new_lines = lines # TODO REMOVE
+    #assert len(lines) >= 80000,"OH NO THE SUBREDDIT " + sr + \
+    #" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
+    #new_lines = random.sample(lines, 80000)
+    return new_lines
             
 def save_doc(item): 
     if item[0] is not None:
@@ -145,27 +154,30 @@ def create_subreddit_docs():
     '''
     Create a document for each subreddit by month
     Lines that start with @@#USER#@@_ are usernames
-    whose comments on that subreddit then follow. 
+    whose comments on that subreddit then follow.
+
+    The step after this is to move non-English subreddits
+    from this folder so they are not part of the remainder of 
+    the pipeline. 
     '''
-    non_english_reddits = set()
-    with open(REMOVED_SRS, 'r') as inputfile: 
-        for line in inputfile: 
-            non_english_reddits.add(line.strip().lower())
     with open(SUBREDDITS, 'r') as inputfile: 
         for line in inputfile: 
             sr = line.strip().lower()
-            if sr not in non_english_reddits: 
-                reddits.add(sr)
+            reddits.add(sr)
     # create output folders
     for sr in reddits: 
         path = SR_FOLDER_MONTH + sr + '/'
         if not os.path.exists(path): 
             os.makedirs(path)
 
-    path = DATA + 'RC_sample'
-    #path = DATA + 'tinyData'
+    #path = DATA + 'RC_all'
+    path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
+    data = data.map(get_subreddit_json)  
+    data = data.reduceByKey(lambda n1, n2: n1 + n2) 
+    data = data.filter(lambda tup: tup[0] is not None)
+    data = data.flatMap(sample_lines) 
     data = data.map(get_comment_user)
     data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
     data = data.map(lambda tup: (tup[0][0], '@@#USER#@@_' + tup[0][1] + '\n' + tup[1]))
@@ -228,15 +240,11 @@ def tokenize_docs():
             data.coalesce(1).saveAsTextFile(SR_FOLDER2 + folder_name)
             break
 
-def sample_lines(tup): 
-    sr = tup[0]
-    lines = tup[1]
-    assert len(lines) >= 80000,"OH NO THE SUBREDDIT " + sr + \
-	" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
-    new_lines = random.sample(lines, 80000)
-    return (sr, new_lines)
-
 def sample_subreddits(): 
+    """
+    This function keeps getting killed
+    on both savio and redwood. 
+    """
     with open(SUBREDDITS, 'r') as inputfile: 
         for line in inputfile: 
             sr = line.strip().lower()
@@ -281,10 +289,7 @@ def count_comments_all():
 
 def main(): 
     #get_top_subreddits(n=500)
-    #count_comments_for_one_subreddit('coys')
-    #count_comments_all()
-    sample_subreddits()
-    #create_subreddit_docs()
+    create_subreddit_docs()
     #create_sr_user_docs() 
     sc.stop()
 
