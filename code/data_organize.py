@@ -18,8 +18,8 @@ from collections import Counter
 import random
 #from stanfordnlp.server import CoreNLPClient
 
-#ROOT = '/data0/lucy/ingroup_lang/'
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -129,10 +129,9 @@ def get_top_subreddits(n=300):
 def sample_lines(tup): 
     sr = tup[0]
     lines = tup[1]
-    new_lines = lines # TODO REMOVE
-    #assert len(lines) >= 80000,"OH NO THE SUBREDDIT " + sr + \
-    #" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
-    #new_lines = random.sample(lines, 80000)
+    assert len(lines) >= 80000,"OH NO THE SUBREDDIT " + sr + \
+    	" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
+    new_lines = random.sample(lines, 80000)
     return new_lines
             
 def save_doc(item): 
@@ -170,8 +169,8 @@ def create_subreddit_docs():
         if not os.path.exists(path): 
             os.makedirs(path)
 
-    #path = DATA + 'RC_all'
-    path = DATA + 'tinyData'
+    path = DATA + 'RC_all'
+    #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
     data = data.map(get_subreddit_json)  
