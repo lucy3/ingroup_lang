@@ -60,7 +60,7 @@ def merge_wordpiece(inpath, outpath):
                 if t.startswith('##'): t = t[2:]
                 tok += t
             outfile.write(prev_ID + '\t' + tok + '\t' + ' '.join([str(j) for j in rep]) + '\n') 
-
+    outfile.close()
             
 
 def main(): 
