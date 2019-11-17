@@ -11,6 +11,7 @@ import time
 import xml.etree.ElementTree as ET
 
 sem_eval_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
+sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
 
 batch_size=32
 dropout_rate=0.25
@@ -35,6 +36,22 @@ class BertEmbeddings():
         self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.model.eval()
         self.model.to(device)
+
+    def read_semeval_test_sentences(self): 
+        """
+        Each word has its own xml file. 
+        """
+        print("Reading sem eval test sentences...") 
+        sentences = []
+        for f in os.listdir(sem_eval_test): 
+            tree = ET.parse(sem_eval_test + f)
+            root = tree.getroot()
+            lemma = f.replace('.xml', '')
+            for instance in root: 
+                ID = instance.attrib['id'] + '_' + lemma + '_' + instance.attrib['token'].lower() 
+                sent = instance.text
+                sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
     
     def read_semeval_sentences(self): 
         '''
@@ -47,7 +64,7 @@ class BertEmbeddings():
         tree = ET.parse(sem_eval_data)
         root = tree.getroot()
         for instance in root: 
-            ID = instance.attrib['id'] + '_' + instance.attrib['lemma'] + '_' + instance.attrib['token']
+            ID = instance.attrib['id'] + '_' + instance.attrib['lemma'] + '_' + instance.attrib['token'].lower() 
             sent = instance.text
             sentences.append((ID, "[CLS] " + sent + " [SEP]"))
         return sentences
@@ -136,7 +153,7 @@ class BertEmbeddings():
                 current_batch = 6
         return batched_data, batched_words, batched_masks, batched_users
 
-    def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, outfile): 
+    def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, outfile, include_token_i=False): 
         ofile = open(outfile, 'w')
         print("Getting embeddings for batched_data of length", len(batched_data))
         for b in range(len(batched_data)):
@@ -161,7 +178,11 @@ class BertEmbeddings():
                     rep = torch.cat((hidden_layers[0], hidden_layers[1], 
                                 hidden_layers[2], hidden_layers[3]), 0) 
                     if words[sent_i][token_i] == '[CLS]' or words[sent_i][token_i] == '[SEP]': continue
-                    ofile.write(users[sent_i] + '\t' +  words[sent_i][token_i] + '\t' + \
+                    if include_token_i: 
+                        ofile.write(users[sent_i] + '\t' +  words[sent_i][token_i] + '\t' + \
+                            ' '.join(str(n) for n in rep.cpu().numpy().reshape(1, -1)[0]) + '\t' + str(token_i) + '\n')
+                    else: 
+                        ofile.write(users[sent_i] + '\t' +  words[sent_i][token_i] + '\t' + \
                             ' '.join(str(n) for n in rep.cpu().numpy().reshape(1, -1)[0]) + '\n')
         ofile.close()
 
@@ -181,24 +202,30 @@ def run_bert_on_reddit():
         embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
         print("TOTAL TIME:", time.time() - time2)
 
-def run_bert_on_semeval():
+def run_bert_on_semeval(test=False):
     root_path = '/global/scratch/lucy3_li/ingroup_lang/' 
     start = time.time()
     embeddings_model = BertEmbeddings()
-    sentences = embeddings_model.read_semeval_sentences()
+    if test: 
+        sentences = embeddings_model.read_semeval_test_sentences()
+    else: 
+        sentences = embeddings_model.read_semeval_sentences()
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
-    outfile = root_path + 'logs/semeval2013_bert'
-    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
+    if test: 
+        outfile = root_path + 'logs/semeval2013_test_bert'
+    else: 
+        outfile = root_path + 'logs/semeval2013_bert'
+    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile, include_token_i=True)
     print("TOTAL TIME:", time.time() - time2)
 
  
 def main(): 
     #run_bert_on_reddit()
-    run_bert_on_semeval()
+    run_bert_on_semeval(test=True)
 
 if __name__ == "__main__":
     main()

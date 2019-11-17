@@ -11,6 +11,7 @@ from MulticoreTSNE import MulticoreTSNE as TSNE
 import random
 
 VEC_FOLDER = '/global/scratch/lucy3_li/ingroup_lang/logs/bert_vectors/'
+LOGS = '/global/scratch/lucy3_li/ingroup_lang/logs/'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
@@ -99,17 +100,62 @@ def compare_word_across_subreddits(subreddit_list, word):
     if word == '.': word = 'period'
     if word == '!': word = 'exclaimmark'
     plt.savefig('../logs/bert_viz_single_word_' + word + '.png')
- 
+
+def get_lemma_vectors(x, lemma): 
+    contents = x.strip().split('\t') 
+    token = contents[0].split('_')[-1]
+    l = contents[0].split('_')[-2]
+    return token == contents[1] and l == lemma
+
+def compare_semeval2013_lemmas(lemma, test=False): 
+    X = []
+    colors = []
+    words = []
+    if test: 
+        infile = LOGS + 'semeval2013_test_bert'
+    else: 
+        infile = LOGS + 'semeval2013_bert'
+    data = sc.textFile(infile) 
+    data = data.filter(lambda x: get_lemma_vectors(x, lemma))
+    data = data.map(get_word_vectors)
+    vecs = data.collect()
+    for item in vecs: 
+        X.append(item[1])
+        words.append(item[0]) 
+    vocab = set(words)
+    color_map = {}
+    color_map_rev = {}
+    for w in vocab: 
+        color_map_rev[tuple(np.random.rand(3,))] = w
+        color_map[w] = tuple(np.random.rand(3,))
+    colors = []
+    for w in words: 
+        colors.append(color_map[w])
+    X = np.array(X)
+    X_embedded = TSNE(n_components=2, n_jobs=-1).fit_transform(X)
+    print("POST-TSNE SHAPE:", X_embedded.shape)
+    fig, ax = plt.subplots()
+    ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.3, marker='.')
+    legend_elements = []
+    for color in color_map_rev: 
+        legend_elements.append(Line2D([0], [0], marker='o', color='w', label=color_map_rev[color], 
+                                   markerfacecolor=color, markersize=10))
+    ax.legend(handles=legend_elements)
+    if test: 
+        plt.savefig('../logs/bert_viz_single_lemma_' + lemma + '_semeval_test.png')
+    else: 
+        plt.savefig('../logs/bert_viz_single_lemma_' + lemma + '_semeval.png')
 
 def main():
     #sanity_check()
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'london')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '.')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'the')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'london')
 
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'fire')
-    compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'sick')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'fire')
+    #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'sick')
+    compare_semeval2013_lemmas('add.v', test=True)
     sc.stop()
 
 if __name__ == '__main__': 
