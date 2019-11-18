@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 
 sem_eval_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
 sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
+sem_eval_2010_train = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/training_data/'
+sem_eval_2010_test = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/test_data/'
 
 batch_size=32
 dropout_rate=0.25
@@ -36,6 +38,39 @@ class BertEmbeddings():
         self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.model.eval()
         self.model.to(device)
+ 
+    def read_semeval2010_test_sentences(self): 
+        print("Reading sem eval 2010 test sentences...")
+        sentences = []
+        for pos in ['nouns', 'verbs']: 
+            for f in os.listdir(sem_eval_2010_test + pos):
+                tree = ET.parse(sem_eval_2010_test + pos + '/' + f)
+                root = tree.getroot()
+                lemma = f.replace('.xml', '') 
+                for instance in root: 
+                    tag = instance.tag
+                    ID = tag + '_' + lemma + '_' + tag.split('.')[0]
+                    for child in instance: 
+                        assert child.tag == 'TargetSentence'
+                        sent = child.text
+                        sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
+
+    def read_semeval2010_train_sentences(self):
+        print("Reading sem eval 2010 train sentences...")
+        sentences = []
+        for pos in ['nouns', 'verbs']: 
+            for f in os.listdir(sem_eval_2010_train + pos): 
+                tree = ET.parse(sem_eval_2010_train + pos + '/' + f)
+                root = tree.getroot()
+                lemma = f.replace('.xml', '')
+                for instance in root: 
+                    tag = instance.tag
+                    ID = tag + '_' + lemma + '_' + tag.split('.')[0]
+                    sent_tok = sent_tokenize(instance.text)
+                    for sent in sent_tok: 
+                        sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
 
     def read_semeval_test_sentences(self): 
         """
@@ -202,30 +237,36 @@ def run_bert_on_reddit():
         embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
         print("TOTAL TIME:", time.time() - time2)
 
-def run_bert_on_semeval(test=False):
+def run_bert_on_semeval(test=False, twentyten=False):
     root_path = '/global/scratch/lucy3_li/ingroup_lang/' 
     start = time.time()
     embeddings_model = BertEmbeddings()
     if test: 
-        sentences = embeddings_model.read_semeval_test_sentences()
+        if twentyten:
+            outfile = root_path + 'logs/semeval2010_test_bert'
+            sentences = embeddings_model.read_semeval2010_test_sentences()
+        else: 
+            outfile = root_path + 'logs/semeval2013_test_bert'
+            sentences = embeddings_model.read_semeval_test_sentences()
     else: 
-        sentences = embeddings_model.read_semeval_sentences()
+        if twentyten: 
+            outfile = root_path + 'logs/semeval2010_train_bert' 
+            sentences = embeddings_model.read_semeval2010_train_sentences()
+        else: 
+            outfile = root_path + 'logs/semeval2013_bert'
+            sentences = embeddings_model.read_semeval_sentences()
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
-    if test: 
-        outfile = root_path + 'logs/semeval2013_test_bert'
-    else: 
-        outfile = root_path + 'logs/semeval2013_bert'
-    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile, include_token_i=True)
+    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
     print("TOTAL TIME:", time.time() - time2)
 
  
 def main(): 
     #run_bert_on_reddit()
-    run_bert_on_semeval(test=True)
+    run_bert_on_semeval(test=True, twentyten=True)
 
 if __name__ == "__main__":
     main()
