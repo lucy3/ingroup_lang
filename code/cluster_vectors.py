@@ -48,20 +48,20 @@ def kmeans_with_gap_statistic(tup):
         ref_disps = np.zeros(nrefs)
         for j in range(nrefs):
             random_ref = np.random.random_sample(size=data.shape)
-            km = KMeans(k, n_jobs=-1)
+            km = KMeans(k, n_jobs=-1, random_state=0)
             km.fit(random_ref)
             ref_disps[j] = km.inertia_
-        km = KMeans(k, n_jobs=-1)
+        km = KMeans(k, n_jobs=-1, random_state=0)
         km.fit(data)
         orig_disp = km.inertia_
         gap = np.mean(np.log(ref_disps)) - np.log(orig_disp)
-        s[i] = math.sqrt(1.0 + 1.0/nrefs)*np.std(ref_disps)
+        s[i] = math.sqrt(1.0 + 1.0/nrefs)*np.std(np.log(ref_disps))
         gaps[i] = gap
         labels[k] = km.labels_
         centroids[k] = km.cluster_centers_
     for i in range(len(ks) - 1): 
         k = ks[i] 
-        if gaps[i] >= gaps[i+1] + s[i+1]:
+        if gaps[i] >= gaps[i+1] - s[i+1]:
             return (IDs, (labels[k], centroids[k]))
     return (IDs, (labels[ks[-1]], centroids[ks[-1]]))
 
@@ -152,13 +152,13 @@ def get_dup_mapping():
 def filter_semeval2013_vecs():
     with open(LOGS + 'semeval2013_dup_map.json', 'r') as infile:
         dup_map = json.load(infile)
-    outfile = (SEMEVAL_TEST_VECTORS2, 'w') 
+    outfile = open(SEMEVAL_TEST_VECTORS2, 'w') 
     times_seen = Counter() # zero indexed
     with open(SEMEVAL_TEST_VECTORS, 'r') as infile: 
         for line in infile: 
             contents = line.strip().split('\t')
-            ID = contents[0]
-            token = ID.split('_')[-1]
+            ID = contents[0].split('_')[-3] 
+            token = contents[0].split('_')[-1]
             if token != contents[1]: continue
             if ID in dup_map: 
                 if times_seen[ID] == dup_map[ID]: 
@@ -243,11 +243,11 @@ def evaluate_bcubed():
 
 def main(): 
     #find_semeval2013_dups()
-    get_dup_mapping()
+    #get_dup_mapping()
     #filter_semeval2013_vecs()
-    #semeval_clusters(test=True)
-    #evaluate_nmi()
-    #evaluate_bcubed()
+    semeval_clusters(test=True)
+    evaluate_nmi()
+    evaluate_bcubed()
 
 if __name__ == "__main__":
     main()
