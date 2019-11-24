@@ -11,7 +11,8 @@ import time
 import xml.etree.ElementTree as ET
 from nltk.stem import WordNetLemmatizer
 
-sem_eval_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
+sem_eval_trial_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
+sem_eval_train = '' # TODO
 sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
 sem_eval_2010_train = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/training_data/'
 sem_eval_2010_test = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/test_data/'
@@ -88,8 +89,11 @@ class BertEmbeddings():
                 sent = instance.text
                 sentences.append((ID, "[CLS] " + sent + " [SEP]"))
         return sentences
+
+    def read_semeval_train_sentences(self):
+        pass
     
-    def read_semeval_sentences(self): 
+    def read_semeval_trial_sentences(self): 
         '''
         This input file is a little wonky; see sem eval readme for more details. 
         The output of sentences contains a list of tuples
@@ -97,7 +101,7 @@ class BertEmbeddings():
         '''
         print("Reading sem eval sentences...") 
         sentences = []
-        tree = ET.parse(sem_eval_data)
+        tree = ET.parse(sem_eval_trial_data)
         root = tree.getroot()
         for instance in root: 
             ID = instance.attrib['id'] + '_' + instance.attrib['lemma'] + '_' + instance.attrib['token'].lower() 
@@ -256,11 +260,11 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
             sentences = embeddings_model.read_semeval_test_sentences()
     else: 
         if twentyten: 
-            outfile = root_path + 'logs/semeval2010_train_bert_small' 
+            outfile = root_path + 'logs/semeval2010_train_bert' 
             sentences = embeddings_model.read_semeval2010_train_sentences()
         else: 
-            outfile = root_path + 'logs/semeval2013_bert'
-            sentences = embeddings_model.read_semeval_sentences()
+            outfile = root_path + 'logs/semeval2013_train_bert'
+            sentences = embeddings_model.read_semeval_train_sentences()
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
@@ -273,7 +277,7 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
  
 def main(): 
     #run_bert_on_reddit()
-    run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
+    #run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
 
 if __name__ == "__main__":
     main()
