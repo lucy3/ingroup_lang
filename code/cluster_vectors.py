@@ -15,6 +15,7 @@ import spacy
 from functools import partial
 from sklearn.decomposition import PCA
 import random
+from sklearn.metrics.pairwise import cosine_similarity
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
@@ -117,20 +118,26 @@ def get_IDs(line):
     ID = contents[0]
     return ID
 
-def find_semeval2013_dups():
+def find_semeval_dups(semeval2010=False):
     """
     Some target words show up twice in the same 
     context. We want to know which instances have
     this issue.
     """
+    if semeval2010: 
+        inpath = SEMEVAL2010_TEST_VECTORS
+        outpath = 'semeval2010_test_dups'
+    else: 
+        inpath = SEMEVAL2013_TEST_VECTORS
+        outpath = 'semeval2013_test_dups'
     conf = SparkConf()
     sc = SparkContext(conf=conf)
-    data = sc.textFile(SEMEVAL_TEST_VECTORS)
+    data = sc.textFile(inpath)
     data = data.filter(semeval_words_of_interest)
     data = data.map(get_IDs)
     IDs = Counter(data.collect())
     sc.stop()
-    with open(LOGS + 'semeval2013_test_dups', 'w') as outfile:
+    with open(LOGS + outpath, 'w') as outfile:
         for i in IDs: 
             if IDs[i] > 1: 
                 outfile.write(i + '\n')
@@ -184,7 +191,7 @@ def filter_semeval2013_vecs():
 
 def sample_vectors(tup): 
     IDs = tup[1][0]
-    X = tup[0][0]
+    X = np.array(tup[1][1])
     cutoff = 500
     if len(IDs) < cutoff: 
         return tup
@@ -195,7 +202,7 @@ def sample_vectors(tup):
             IDs_sample.append(IDs[i])
     return (tup[0], (IDs_sample, X[idx,:]))
 
-def semeval_cluster_training(semeval2010=False): 
+def semeval_cluster_training(semeval2010=False, dim_reduct=None): 
     '''
     Input: training vectors
     note that one ID might have multiple instances of a word
@@ -213,17 +220,54 @@ def semeval_cluster_training(semeval2010=False):
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    size = data.map(get_data_size).collectAsMap() # TODO: delete
-    for key in size: # TODO: delete
-        print(key, size[key]) # TODO: delete
-    #data = data.map(kmeans_with_gap_statistic)
-    #clustered_IDs = data.collect()
+    data = data.map(partial(kmeans_with_gap_statistic, dim_reduct=dim_reduct))
+    clustered_IDs = data.collect()
     sc.stop() 
-    #for tup in clustered_IDs: 
-    #    ID = tup[0][0]
-    #    lemma = ID.split('_')[-2]
-    #    centroids = np.array(tup[1][1])
-    #    np.save(LOGS + outname + lemma + '.npy', centroids)
+    for tup in clustered_IDs: 
+        ID = tup[0][0]
+        lemma = ID.split('_')[-2]
+        centroids = np.array(tup[1][1])
+        np.save(LOGS + outname + lemma + '.npy', centroids)
+
+def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None):
+    lemma = tup[0]
+    IDs = tup[1][0]
+    data = np.array(tup[1][1])
+    if dim_reduct is not None: 
+        pca = PCA(n_components=dim_reduct, random_state=0)
+        data = pca.fit_transform(data)
+    if semeval2010: 
+        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '.npy')
+    else: 
+        pass
+    assert data.shape[1] == centroids.shape[1]
+    sims = cosine_similarity(data, centroids) # IDs x n_centroids
+    labels = np.argmax(sims, axis=1)
+    ret = []
+    for i in range(len(IDs)): 
+        ret.append((IDs[i], labels[i]))
+    return ret
+
+def semeval_cluster_test(semeval2010=False, dim_reduct=None): 
+    conf = SparkConf()
+    sc = SparkContext(conf=conf) 
+    if semeval2010: 
+        outname = 'semeval2010_clusters/'
+        data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
+    else: 
+        outname = 'semeval2013_clusters/'
+        data = sc.textFile(SEMEVAL2013_TEST_VECTORS)
+    data = data.map(get_semeval_vector)
+    data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
+    data = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, dim_reduct=dim_reduct))
+    id_labels = data.collectAsMap()
+    with open(LOGS + outname, 'w') as outfile: 
+        for ID in id_labels: 
+            label = id_labels[ID]
+            small_id = ID.split('_')[-3]
+            lemma = ID.split('_')[-2]
+            outfile.write(lemma + ' ' + small_id + ' ' + lemma + str(label) + '\n')
+
 
 def evaluate_nmi(): 
     print("calculating nmi...") 
@@ -303,11 +347,12 @@ def evaluate_bcubed():
     print("Precision:", np.mean(precisions), "Recall:", np.mean(recalls), "F-score:", np.mean(fscores))
 
 def main(): 
-    #find_semeval2013_dups()
+    #find_semeval_dups(semeval2010=True)
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    semeval_cluster_training(semeval2010=True)
+    semeval_cluster_test(semeval2010=True, dim_reduct=100)
+    #semeval_cluster_training(semeval2010=True, dim_reduct=100)
     #evaluate_nmi()
     #evaluate_bcubed()
 
