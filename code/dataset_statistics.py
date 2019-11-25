@@ -14,25 +14,21 @@ def count_tokens():
     
 def count_comments(): 
     comment_count = Counter()
+    user_count = Counter()
     for sr in os.listdir(SR_FOLDER_MONTH): 
         num_lines = 0
+        num_users = 0
         with open(SR_FOLDER_MONTH + sr + '/RC_sample', 'r') as infile: 
             for line in infile: 
-                if line.startswith('@@#USER#@@_'): continue
-                num_lines += 1
+                if line.startswith('@@#USER#@@_'): 
+                    num_users += 1
+                else: 
+                    num_lines += 1
         comment_count[sr] = num_lines
+        user_count[sr] = num_users
     with open(LOGS + 'dataset_statistics_comments.txt', 'w') as outfile: 
         for tup in comment_count.most_common(): 
-            outfile.write(tup[0] + '\t' + str(tup[1]) + '\n')
-    '''
-    # the below code doesn't work
-    plt.xscale('log')
-    plt.hist(comment_count.values(), bins=np.logspace(np.log10(0.1),np.log10(1.0), 10))
-    plt.ylabel("number of subreddits") 
-    plt.xlabel("total # of comments") 
-    plt.savefig(LOGS + 'dataset_statistics_comments.png')
-    '''
-        
+            outfile.write(tup[0] + '\t' + str(tup[1]) + '\t' + str(user_count[tup[0]]) + '\n')
 
 def main(): 
     count_tokens()

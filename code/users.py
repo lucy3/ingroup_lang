@@ -5,7 +5,7 @@ import os
 
 ROOT = '/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
-SR_FOLDER = ROOT + 'subreddits/'
+SR_FOLDER = ROOT + 'subreddits_month/'
 LOG_DIR = ROOT + 'logs/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
@@ -73,7 +73,7 @@ def user_activity():
     subreddits = subreddits.reduceByKey(lambda n1, n2: n1 + n2) 
     total_com = subreddits.collectAsMap()
     outfile = open(LOG_DIR + 'commentor_activity', 'w')
-    commentor_path = LOG_DIR + '/commentor_counts/part-00000-f83d5d87-c50d-4d5a-a560-e978e85e0af8-c000.csv'
+    commentor_path = LOG_DIR + 'commentor_counts/part-00000-64b1d705-9cf8-4a54-9c4d-598e5bf9085f-c000.csv'
     outfile.write('subreddit,activity\n')
     with open(commentor_path, 'r') as infile: 
         for line in infile: 
@@ -85,8 +85,8 @@ def user_activity():
     outfile.close()
 
 def main(): 
-    count_unique_users()
-    user_activity()
+    #count_unique_users()
+    #user_activity()
     sc.stop()
 
 if __name__ == '__main__':
