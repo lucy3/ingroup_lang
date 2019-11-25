@@ -9,8 +9,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 from nltk.tokenize import sent_tokenize
 import time
 import xml.etree.ElementTree as ET
+from nltk.stem import WordNetLemmatizer
 
-sem_eval_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
+sem_eval_trial_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
+sem_eval_train = '' # TODO
+sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
+sem_eval_2010_train = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/training_data/'
+sem_eval_2010_test = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/test_data/'
 
 batch_size=32
 dropout_rate=0.25
@@ -35,8 +40,60 @@ class BertEmbeddings():
         self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.model.eval()
         self.model.to(device)
+ 
+    def read_semeval2010_test_sentences(self): 
+        print("Reading sem eval 2010 test sentences...")
+        sentences = []
+        for pos in ['nouns', 'verbs']: 
+            for f in os.listdir(sem_eval_2010_test + pos):
+                tree = ET.parse(sem_eval_2010_test + pos + '/' + f)
+                root = tree.getroot()
+                lemma = f.replace('.xml', '') 
+                for instance in root: 
+                    tag = instance.tag
+                    ID = tag + '_' + lemma + '_' + tag.split('.')[0]
+                    for child in instance: 
+                        assert child.tag == 'TargetSentence'
+                        sent = child.text
+                        sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
+
+    def read_semeval2010_train_sentences(self):
+        print("Reading sem eval 2010 train sentences...")
+        sentences = []
+        for pos in ['verbs', 'nouns']: 
+            for f in os.listdir(sem_eval_2010_train + pos): 
+                tree = ET.parse(sem_eval_2010_train + pos + '/' + f)
+                root = tree.getroot()
+                lemma = f.replace('.xml', '')
+                for instance in root: 
+                    tag = instance.tag
+                    ID = tag + '_' + lemma + '_' + tag.split('.')[0]
+                    sent_tok = sent_tokenize(instance.text)
+                    for sent in sent_tok: 
+                        sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
+
+    def read_semeval_test_sentences(self): 
+        """
+        Each word has its own xml file. 
+        """
+        print("Reading sem eval test sentences...") 
+        sentences = []
+        for f in os.listdir(sem_eval_test): 
+            tree = ET.parse(sem_eval_test + f)
+            root = tree.getroot()
+            lemma = f.replace('.xml', '')
+            for instance in root: 
+                ID = instance.attrib['id'] + '_' + lemma + '_' + instance.attrib['token'].lower() 
+                sent = instance.text
+                sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
+
+    def read_semeval_train_sentences(self):
+        pass
     
-    def read_semeval_sentences(self): 
+    def read_semeval_trial_sentences(self): 
         '''
         This input file is a little wonky; see sem eval readme for more details. 
         The output of sentences contains a list of tuples
@@ -44,10 +101,10 @@ class BertEmbeddings():
         '''
         print("Reading sem eval sentences...") 
         sentences = []
-        tree = ET.parse(sem_eval_data)
+        tree = ET.parse(sem_eval_trial_data)
         root = tree.getroot()
         for instance in root: 
-            ID = instance.attrib['id'] + '_' + instance.attrib['lemma'] + '_' + instance.attrib['token']
+            ID = instance.attrib['id'] + '_' + instance.attrib['lemma'] + '_' + instance.attrib['token'].lower() 
             sent = instance.text
             sentences.append((ID, "[CLS] " + sent + " [SEP]"))
         return sentences
@@ -136,7 +193,9 @@ class BertEmbeddings():
                 current_batch = 6
         return batched_data, batched_words, batched_masks, batched_users
 
-    def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, outfile): 
+    def get_embeddings(self, batched_data, batched_words, batched_masks, \
+              batched_users, outfile, only_save_lemmas=False): 
+        wnl = WordNetLemmatizer()
         ofile = open(outfile, 'w')
         print("Getting embeddings for batched_data of length", len(batched_data))
         for b in range(len(batched_data)):
@@ -152,6 +211,14 @@ class BertEmbeddings():
             for sent_i in range(len(words)): 
                 for token_i in range(len(words[sent_i])):
                     if batched_masks[b][sent_i][token_i] == 0: continue
+                    if only_save_lemmas: 
+                        # only used for semeval 2010 to save space
+                        ID = users[sent_i].split('_')
+                        lemma = ID[-1]
+                        w = words[sent_i][token_i]
+                        pos = ID[-2].split('.')[-1]
+                        if wnl.lemmatize(w, pos) != lemma: continue
+                    if words[sent_i][token_i] == '[CLS]' or words[sent_i][token_i] == '[SEP]': continue
                     # TODO if we filter by vocabulary, do it here
                     hidden_layers = [] 
                     for layer_i in range(1, 5):
@@ -160,7 +227,6 @@ class BertEmbeddings():
                     # concatenate last four layers
                     rep = torch.cat((hidden_layers[0], hidden_layers[1], 
                                 hidden_layers[2], hidden_layers[3]), 0) 
-                    if words[sent_i][token_i] == '[CLS]' or words[sent_i][token_i] == '[SEP]': continue
                     ofile.write(users[sent_i] + '\t' +  words[sent_i][token_i] + '\t' + \
                             ' '.join(str(n) for n in rep.cpu().numpy().reshape(1, -1)[0]) + '\n')
         ofile.close()
@@ -181,24 +247,37 @@ def run_bert_on_reddit():
         embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
         print("TOTAL TIME:", time.time() - time2)
 
-def run_bert_on_semeval():
+def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
     root_path = '/global/scratch/lucy3_li/ingroup_lang/' 
     start = time.time()
     embeddings_model = BertEmbeddings()
-    sentences = embeddings_model.read_semeval_sentences()
+    if test: 
+        if twentyten:
+            outfile = root_path + 'logs/semeval2010_test_bert'
+            sentences = embeddings_model.read_semeval2010_test_sentences()
+        else: 
+            outfile = root_path + 'logs/semeval2013_test_bert'
+            sentences = embeddings_model.read_semeval_test_sentences()
+    else: 
+        if twentyten: 
+            outfile = root_path + 'logs/semeval2010_train_bert' 
+            sentences = embeddings_model.read_semeval2010_train_sentences()
+        else: 
+            outfile = root_path + 'logs/semeval2013_train_bert'
+            sentences = embeddings_model.read_semeval_train_sentences()
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
-    outfile = root_path + 'logs/semeval2013_bert'
-    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
+    embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, \
+            outfile, only_save_lemmas=only_save_lemmas)
     print("TOTAL TIME:", time.time() - time2)
 
  
 def main(): 
     #run_bert_on_reddit()
-    run_bert_on_semeval()
+    #run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
 
 if __name__ == "__main__":
     main()
