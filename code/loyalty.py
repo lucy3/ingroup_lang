@@ -100,8 +100,7 @@ def calculate_loyalty(threshold=0.5):
 
 def main(): 
     #count_unique_users()
-    #get_post_ids()
-    #get_user_subreddits()
+    get_user_subreddits()
     for threshold in [0.2, 0.3, 0.4, 0.5, 0.6]: 
         calculate_loyalty(threshold)
     sc.stop()

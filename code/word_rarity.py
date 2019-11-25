@@ -14,7 +14,7 @@ ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
-SR_DATA_DIR = ROOT + 'subreddits4/' # TODO check if this is still the case
+SR_DATA_DIR = ROOT + 'subreddits3/'
 LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
@@ -30,7 +30,7 @@ def count_words():
     log_file = open(LOG_DIR + 'counting_log.temp', 'w')
     for filename in os.listdir(SR_DATA_DIR):  
         log_file.write(filename + '\n') 
-        path = SR_DATA_DIR + filename + '/RC_sample'
+        path = SR_DATA_DIR + filename + '/RC_sample.conll'
         log_file.write('\tReading in textfile\n')
         data = sc.textFile(path)
         data = data.filter(lambda line: line.strip() != '')
@@ -183,18 +183,11 @@ def word_tfidf(percent_param=0.2):
     log_file.write("DONE\n")
     log_file.close()
 
-def niche_disem(percent_param=0.2):
-    """
-    Altmann's metric, but for subreddits instead of users
-    
-    """
-    pass
-
 def main(): 
-    #count_words()
-    #count_overall_words()
-    #calculate_pmi()
-    #count_document_freq()
+    count_words()
+    count_overall_words()
+    calculate_pmi()
+    count_document_freq()
     word_tfidf()
     sc.stop()
 

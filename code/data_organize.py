@@ -168,7 +168,9 @@ def create_subreddit_docs():
         path = SR_FOLDER_MONTH + sr + '/'
         if not os.path.exists(path): 
             os.makedirs(path)
-
+    random.seed(0)
+    logfile = open(LOGS + 'create_subreddit_docs.temp', 'w') 
+    
     path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
@@ -177,11 +179,15 @@ def create_subreddit_docs():
     data = data.reduceByKey(lambda n1, n2: n1 + n2) 
     data = data.filter(lambda tup: tup[0] is not None)
     data = data.flatMap(sample_lines) 
+    logfile.write('After flatmap: ' + str(data.count()) + '\n') 
     data = data.map(get_comment_user)
+    logfile.write("After mapping to comment user: " + str(data.count()) + '\n') 
     data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
-    data = data.map(lambda tup: (tup[0][0], '@@#USER#@@_' + tup[0][1] + '\n' + tup[1]))
+    logfile.write("Number of subreddit-user pairs: " + str(data.count()) + '\n')
+    data = data.map(lambda tup: (tup[0][0], 'USER1USER0USER' + str(''.join(format(ord(i), 'b') for i in tup[0][1])) + '\n' + tup[1]))
     data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
     data = data.foreach(save_doc)
+    logfile.close()
     
 def create_sr_user_docs(): 
     """
