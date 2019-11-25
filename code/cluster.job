@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=cluster
-#SBATCH --partition=savio2
+#SBATCH --partition=savio2_bigmem
 #SBATCH --time=10:00:00
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 module load java
 
 time /global/home/users/lucy3_li/spark-2.4.4-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 64G --driver-memory 64G /global/scratch/lucy3_li/ingroup_lang/code/cluster_vectors.py
