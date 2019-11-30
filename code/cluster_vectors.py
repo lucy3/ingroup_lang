@@ -16,6 +16,7 @@ from functools import partial
 from sklearn.decomposition import PCA
 import random
 from sklearn.metrics.pairwise import cosine_similarity
+import os.path
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
@@ -237,7 +238,10 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None):
         pca = PCA(n_components=dim_reduct, random_state=0)
         data = pca.fit_transform(data)
     if semeval2010: 
-        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '.npy')
+        if os.path.isfile(LOGS + 'semeval2010_centroids/' + lemma + '.npy'):
+            centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '.npy')
+        else:
+            centroids = np.zeros((9, data.shape[1]))
     else: 
         pass
     assert data.shape[1] == centroids.shape[1]
@@ -252,10 +256,10 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None):
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010_clusters/'
+        outname = 'semeval2010_clusters'
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
-        outname = 'semeval2013_clusters/'
+        outname = 'semeval2013_clusters'
         data = sc.textFile(SEMEVAL2013_TEST_VECTORS)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))

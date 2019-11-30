@@ -91,6 +91,9 @@ class BertEmbeddings():
         return sentences
 
     def read_semeval_train_sentences(self):
+        '''
+        The ID is the line number 
+        '''
         pass
     
     def read_semeval_trial_sentences(self): 
