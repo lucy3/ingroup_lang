@@ -16,10 +16,15 @@ import os
 from pyspark import SparkConf, SparkContext
 from collections import Counter
 import random
+from nltk.tokenize import sent_tokenize, word_tokenize
+from functools import partial
+from nltk.stem import WordNetLemmatizer
 #from stanfordnlp.server import CoreNLPClient
 
-ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+wnl = WordNetLemmatizer()
+
+#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -292,21 +297,58 @@ def count_comments_all():
        outfile.write(sr[0] + '\t' + str(sr[1]) + '\n') 
     outfile.close()
 
+def sentences_with_target_words(line, target_set=set()): 
+    sentences = sent_tokenize(line.strip()) 
+    ret = []
+    for s in sentences: 
+       tokens = set(word_tokenize(s.lower()))
+       for item in target_set: 
+           lemma = item.split('.')[0]
+           for tok in tokens: 
+               if wnl.lemmatize(tok) == lemma: 
+                   ret.append((lemma, tok, s))
+    return ret
+
 def filter_ukwac(): 
     """
     For every sentence
     Only keep the ones in which a targeted lemma
-    appears under its correct part of speech.
+    appears. 
     Format it as 
     lemma \t target word \t sentence
     for easy BERT processing :)
     """
-    pass
+    directory = ROOT + 'SemEval-2013-Task-13-test-data/contexts/xml-format/'
+    target_set = set()
+    for f in os.listdir(directory): 
+        if f.endswith('.xml'): 
+            target_set.add(f.replace('.xml', ''))
+    data = sc.textFile(DATA + 'ukwac_preproc.gz')
+    data = data.filter(lambda line: not line.startswith("CURRENT URL "))
+    data = data.flatMap(partial(sentences_with_target_words, target_set=target_set))
+    data = data.collect()
+    with open(LOGS + 'ukwac2.txt', 'w') as outfile: 
+        for item in data: 
+            outfile.write(item[0] + '\t' + item[1] + '\t' + item[2] + '\n')
 
+def prep_finetuning(): 
+    """
+    Remove usernames, concatenate files together
+    """
+    rdds = []
+    for folder in os.listdir(SR_FOLDER_MONTH): 
+        path = SR_FOLDER_MONTH + folder + '/RC_sample'
+        data = sc.textFile(path)
+        data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
+        rdds.append(data)
+    all_data = sc.union(rdds)
+    all_data.saveAsTextFile(LOGS + 'finetune_input') 
+    
 def main(): 
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
+    #prep_finetuning()
     filter_ukwac()
     sc.stop()
 

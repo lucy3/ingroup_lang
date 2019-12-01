@@ -18,6 +18,9 @@ import random
 from sklearn.metrics.pairwise import cosine_similarity
 import os.path
 from joblib import dump, load
+from nltk.stem import WordNetLemmatizer
+
+wnl = WordNetLemmatizer()
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
@@ -31,6 +34,13 @@ def semeval_words_of_interest(line):
     contents = line.strip().split('\t')
     token = contents[0].split('_')[-1]
     return token == contents[1]
+
+def semeval_lemmas_of_interest(line): 
+    contents = line.strip().split('\t') 
+    ID = contents[0].split('_')
+    lemma = ID[-1]
+    pos = ID[-2].split('.')[-1]
+    return lemma == wnl.lemmatize(w, pos)
 
 def get_semeval_vector(line): 
     contents = line.strip().split('\t') 
@@ -221,7 +231,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None):
     else: 
         outname = 'semeval2013_centroids/'
         data = sc.textFile(SEMEVAL2013_TRAIN_VECTORS)
-    # TODO: filter vectors where lemma(word) = target
+    data = data.filter(semeval_lemmas_of_interest)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
@@ -232,7 +242,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None):
         ID = tup[0][0]
         lemma = ID.split('_')[-2]
         centroids = np.array(tup[1][1])
-        np.save(LOGS + outname + lemma + '.npy', centroids)
+        np.save(LOGS + outname + lemma + '_' + str(dim_reduct) + '.npy', centroids)
 
 def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None):
     lemma = tup[0]
@@ -244,9 +254,9 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None):
         pca = load(inpath)
         data = pca.transform(data)
     if semeval2010: 
-        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '.npy')
+        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '_' + str(dim_reduct) + '.npy')
     else: 
-        pass
+        centroids = np.load(LOGS + 'semeval2013_centroids/' + lemma + '_' + str(dim_reduct) + '.npy')
     assert data.shape[1] == centroids.shape[1]
     sims = cosine_similarity(data, centroids) # IDs x n_centroids
     labels = np.argmax(sims, axis=1)
@@ -259,12 +269,12 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None):
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010_clusters'
+        outname = 'semeval2010_clusters' + str(dim_reduct)
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
-        outname = 'semeval2013_clusters'
+        outname = 'semeval2013_clusters' + str(dim_reduct)
         data = sc.textFile(SEMEVAL2013_TEST_VECTORS)
-    # TODO filter vectors
+    data = data.filter(semeval_lemmas_of_interest)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, dim_reduct=dim_reduct))
@@ -390,8 +400,10 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    #semeval_cluster_test(semeval2010=True, dim_reduct=100)
-    #semeval_cluster_training(semeval2010=True, dim_reduct=100)
+    # for dr in [20, 50, 70, 100, 150, 200]:  
+    
+    semeval_cluster_training(semeval2010=True, dim_reduct=100)
+    semeval_cluster_test(semeval2010=True, dim_reduct=100)
 
 if __name__ == "__main__":
     main()

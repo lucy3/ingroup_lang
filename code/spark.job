@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=data_organize_spark
 #SBATCH --partition=savio2
-#SBATCH --time=10:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 module load java
 

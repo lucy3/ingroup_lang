@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=cluster
-#SBATCH --partition=savio2_bigmem
+#SBATCH --partition=savio2
 #SBATCH --time=10:00:00
 #SBATCH --nodes=2
 module load java

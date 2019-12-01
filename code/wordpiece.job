@@ -2,11 +2,11 @@
 # Job name:
 #SBATCH --job-name=wordpiece
 # Partition:
-#SBATCH --partition=savio2
+#SBATCH --partition=savio
 #
 # Wall clock limit:
-#SBATCH --time=2:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 
-python bert_post.py /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010_test_bert /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010_test_bert2
+python bert_post.py /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010_train_bert /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010_train_bert2

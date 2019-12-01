@@ -21,6 +21,8 @@ batch_size=32
 dropout_rate=0.25
 bert_dim=768
 
+start_wordpieces = set()
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print('')
@@ -49,6 +51,8 @@ class BertEmbeddings():
                 tree = ET.parse(sem_eval_2010_test + pos + '/' + f)
                 root = tree.getroot()
                 lemma = f.replace('.xml', '') 
+                toks = self.tokenizer.tokenize(lemma)
+                if len(toks) > 1: start_wordpieces.add(toks[0])
                 for instance in root: 
                     tag = instance.tag
                     ID = tag + '_' + lemma + '_' + tag.split('.')[0]
@@ -66,6 +70,8 @@ class BertEmbeddings():
                 tree = ET.parse(sem_eval_2010_train + pos + '/' + f)
                 root = tree.getroot()
                 lemma = f.replace('.xml', '')
+                toks = self.tokenizer.tokenize(lemma)
+                if len(toks) > 1: start_wordpieces.add(toks[0])
                 for instance in root: 
                     tag = instance.tag
                     ID = tag + '_' + lemma + '_' + tag.split('.')[0]
@@ -214,15 +220,18 @@ class BertEmbeddings():
             for sent_i in range(len(words)): 
                 for token_i in range(len(words[sent_i])):
                     if batched_masks[b][sent_i][token_i] == 0: continue
+                    w = words[sent_i][token_i]
                     if only_save_lemmas: 
-                        # only used for semeval 2010 to save space
-                        ID = users[sent_i].split('_')
-                        lemma = ID[-1]
-                        w = words[sent_i][token_i]
-                        pos = ID[-2].split('.')[-1]
-                        if wnl.lemmatize(w, pos) != lemma: continue
-                    if words[sent_i][token_i] == '[CLS]' or words[sent_i][token_i] == '[SEP]': continue
-                    # TODO if we filter by vocabulary, do it here
+                        # only save lemmas and wordpieces, to save space
+                        next_w = ''
+                        if (token_i + 1) < len(words[sent_i]): 
+                            next_w = words[sent_i][token_i+1]
+                        if '##' not in w and '##' not in next_w: 
+                            ID = users[sent_i].split('_')
+                            lemma = ID[-1]
+                            pos = ID[-2].split('.')[-1]
+                            if wnl.lemmatize(w, pos) != lemma: continue
+                    if w == '[CLS]' or w == '[SEP]': continue
                     hidden_layers = [] 
                     for layer_i in range(1, 5):
                         vec = encoded_layers[-layer_i][sent_i][token_i]
@@ -230,7 +239,7 @@ class BertEmbeddings():
                     # concatenate last four layers
                     rep = torch.cat((hidden_layers[0], hidden_layers[1], 
                                 hidden_layers[2], hidden_layers[3]), 0) 
-                    ofile.write(users[sent_i] + '\t' +  words[sent_i][token_i] + '\t' + \
+                    ofile.write(users[sent_i] + '\t' +  w + '\t' + \
                             ' '.join(str(n) for n in rep.cpu().numpy().reshape(1, -1)[0]) + '\n')
         ofile.close()
 
@@ -280,7 +289,8 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
  
 def main(): 
     #run_bert_on_reddit()
-    #run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
+    #run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True)
+    run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
 
 if __name__ == "__main__":
     main()
