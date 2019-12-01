@@ -292,10 +292,22 @@ def count_comments_all():
        outfile.write(sr[0] + '\t' + str(sr[1]) + '\n') 
     outfile.close()
 
+def filter_ukwac(): 
+    """
+    For every sentence
+    Only keep the ones in which a targeted lemma
+    appears under its correct part of speech.
+    Format it as 
+    lemma \t target word \t sentence
+    for easy BERT processing :)
+    """
+    pass
+
 def main(): 
     #get_top_subreddits(n=500)
-    create_subreddit_docs()
+    #create_subreddit_docs()
     #create_sr_user_docs() 
+    filter_ukwac()
     sc.stop()
 
 if __name__ == '__main__':
