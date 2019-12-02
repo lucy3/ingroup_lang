@@ -40,7 +40,7 @@ def semeval_lemmas_of_interest(line):
     ID = contents[0].split('_')
     lemma = ID[-1]
     pos = ID[-2].split('.')[-1]
-    return lemma == wnl.lemmatize(w, pos)
+    return lemma == wnl.lemmatize(contents[1], pos)
 
 def get_semeval_vector(line): 
     contents = line.strip().split('\t') 

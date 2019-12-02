@@ -342,14 +342,23 @@ def prep_finetuning():
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
         rdds.append(data)
     all_data = sc.union(rdds)
-    all_data.saveAsTextFile(LOGS + 'finetune_input') 
+    all_data.saveAsTextFile(LOGS + 'finetune_input')
+
+def temp(): 
+    data = sc.textFile(SR_FOLDER_MONTH + 'askreddit/RC_sample') 
+    data = data.flatMap(lambda line: [(w, 1) for w in line.split()])
+    data = data.reduceByKey(lambda n1, n2: n1 + n2)
+    data = data.collectAsMap()
+    print(len(data.keys()))
+    print("DONEEEE")  
     
 def main(): 
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
     #prep_finetuning()
-    filter_ukwac()
+    #filter_ukwac()
+    temp()
     sc.stop()
 
 if __name__ == '__main__':

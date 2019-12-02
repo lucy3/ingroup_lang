@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --job-name=test_spark
+#SBATCH --partition=savio2
+#SBATCH --time=3-00:00:00
+#SBATCH --nodes=1
+module load java spark/2.1.0
+source /global/home/groups/allhands/bin/spark_helper.sh
+
+spark-start
+
+#spark-submit --master $SPARK_URL --executor-memory 64G --driver-memory 64G /global/scratch/lucy3_li/ingroup_lang/code/data_organize.py
+
+#spark-submit --master $SPARK_URL --executor-memory 64G --driver-memory 64G $SPARK_DIR/examples/src/main/python/pi.py
+
+spark-submit --master $SPARK_URL $SPARK_DIR/examples/src/main/python/pi.py
+
+
+spark-stop
