@@ -279,6 +279,7 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None):
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, dim_reduct=dim_reduct))
     id_labels = data.collectAsMap()
+    sc.stop()
     with open(LOGS + outname, 'w') as outfile: 
         for ID in id_labels: 
             label = id_labels[ID]
@@ -400,10 +401,9 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    # for dr in [20, 50, 70, 100, 150, 200]:  
-    
-    semeval_cluster_training(semeval2010=True, dim_reduct=100)
-    semeval_cluster_test(semeval2010=True, dim_reduct=100)
+    for dr in [20, 50, 70, 100, 150, 200]:  
+        semeval_cluster_training(semeval2010=True, dim_reduct=dr)
+        semeval_cluster_test(semeval2010=True, dim_reduct=dr)
 
 if __name__ == "__main__":
     main()

@@ -342,7 +342,7 @@ def prep_finetuning():
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
         rdds.append(data)
     all_data = sc.union(rdds)
-    all_data.saveAsTextFile(LOGS + 'finetune_input')
+    all_data.coalesce(1).saveAsTextFile(LOGS + 'finetune_input')
 
 def temp(): 
     data = sc.textFile(SR_FOLDER_MONTH + 'askreddit/RC_sample') 
@@ -356,9 +356,9 @@ def main():
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    #prep_finetuning()
+    prep_finetuning()
     #filter_ukwac()
-    temp()
+    #temp()
     sc.stop()
 
 if __name__ == '__main__':
