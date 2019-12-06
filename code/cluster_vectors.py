@@ -24,11 +24,11 @@ wnl = WordNetLemmatizer()
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
-SEMEVAL2010_TRAIN_VECTORS = LOGS + 'semeval2010_train_bert2'
-SEMEVAL2010_TEST_VECTORS = LOGS + 'semeval2010_test_bert2'
-SEMEVAL2013_TRAIN_VECTORS = LOGS + 'semeval2013_train_bert2'
-SEMEVAL2013_TEST_VECTORS = LOGS + 'semeval2013_test_bert2'
-SEMEVAL2013_TEST_VECTORS2 = LOGS + 'semeval2013_test_bert3'
+SEMEVAL2010_TRAIN_VECTORS = LOGS + 'semeval2010/semeval2010_train_bert2'
+SEMEVAL2010_TEST_VECTORS = LOGS + 'semeval2010/semeval2010_test_bert2'
+SEMEVAL2013_TRAIN_VECTORS = LOGS + 'semeval2013/semeval2013_train_bert2'
+SEMEVAL2013_TEST_VECTORS = LOGS + 'semeval2013/semeval2013_test_bert2'
+SEMEVAL2013_TEST_VECTORS2 = LOGS + 'semeval2013/semeval2013_test_bert3'
 
 def semeval_words_of_interest(line): 
     contents = line.strip().split('\t')
@@ -49,7 +49,7 @@ def get_semeval_vector(line):
     vector = np.array([[float(i) for i in contents[2].split()]])
     return (lemma, ([ID], vector))
 
-def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False): 
+def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0): 
     """
     Based off of https://anaconda.org/milesgranger/gap-statistic/notebook
     """
@@ -57,9 +57,10 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False):
     IDs = tup[1][0]
     data = tup[1][1]
     if dim_reduct is not None: 
-        pca = PCA(n_components=dim_reduct, random_state=0)
+        pca = PCA(n_components=dim_reduct, random_state=rs)
         data = pca.fit_transform(data)
-        outpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + str(dim_reduct) + '.joblib'
+        outpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
+            str(dim_reduct) + '_' + str(rs) + '.joblib'
         dump(pca, outpath)
     nrefs = 50
     ks = range(2, 10)
@@ -71,10 +72,10 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False):
         ref_disps = np.zeros(nrefs)
         for j in range(nrefs):
             random_ref = np.random.random_sample(size=data.shape)
-            km = KMeans(k, n_jobs=-1, random_state=0)
+            km = KMeans(k, n_jobs=-1, random_state=rs)
             km.fit(random_ref)
             ref_disps[j] = km.inertia_
-        km = KMeans(k, n_jobs=-1, random_state=0)
+        km = KMeans(k, n_jobs=-1, random_state=rs)
         km.fit(data)
         orig_disp = km.inertia_
         gap = np.mean(np.log(ref_disps)) - np.log(orig_disp)
@@ -216,13 +217,13 @@ def sample_vectors(tup):
             IDs_sample.append(IDs[i])
     return (tup[0], (IDs_sample, X[idx,:]))
 
-def semeval_cluster_training(semeval2010=False, dim_reduct=None): 
+def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0): 
     '''
     Input: training vectors
     note that one ID might have multiple instances of a word
     Output: cluster centroids
     '''
-    random.seed(0)
+    random.seed(rs)
     conf = SparkConf()
     sc = SparkContext(conf=conf)
     if semeval2010: 
@@ -235,28 +236,30 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None):
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    data = data.map(partial(kmeans_with_gap_statistic, dim_reduct=dim_reduct, semeval2010=semeval2010))
+    data = data.map(partial(kmeans_with_gap_statistic, dim_reduct=dim_reduct, semeval2010=semeval2010, rs=rs))
     clustered_IDs = data.collect()
     sc.stop() 
     for tup in clustered_IDs: 
         ID = tup[0][0]
         lemma = ID.split('_')[-2]
         centroids = np.array(tup[1][1])
-        np.save(LOGS + outname + lemma + '_' + str(dim_reduct) + '.npy', centroids)
+        np.save(LOGS + outname + lemma + '_' + str(dim_reduct) + '_' + str(rs) + '.npy', centroids)
 
-def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None):
+def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0):
     lemma = tup[0]
     IDs = tup[1][0]
     data = np.array(tup[1][1])
     if dim_reduct is not None: 
         inpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + \
-             '_' + str(dim_reduct) + '.joblib'
+             '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
         pca = load(inpath)
         data = pca.transform(data)
     if semeval2010: 
-        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '_' + str(dim_reduct) + '.npy')
+        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '_' + \
+             str(dim_reduct) + '_' + str(rs) + '.npy')
     else: 
-        centroids = np.load(LOGS + 'semeval2013_centroids/' + lemma + '_' + str(dim_reduct) + '.npy')
+        centroids = np.load(LOGS + 'semeval2013_centroids/' + lemma + '_' + \
+             str(dim_reduct) + '_' + str(rs) + '.npy')
     assert data.shape[1] == centroids.shape[1]
     sims = cosine_similarity(data, centroids) # IDs x n_centroids
     labels = np.argmax(sims, axis=1)
@@ -265,19 +268,19 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None):
         ret.append((IDs[i], labels[i]))
     return ret
 
-def semeval_cluster_test(semeval2010=False, dim_reduct=None): 
+def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0): 
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010_clusters' + str(dim_reduct)
+        outname = 'semeval2010_clusters' + str(dim_reduct) + '_' + str(rs)
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
-        outname = 'semeval2013_clusters' + str(dim_reduct)
+        outname = 'semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
         data = sc.textFile(SEMEVAL2013_TEST_VECTORS)
     data = data.filter(semeval_lemmas_of_interest)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
-    data = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, dim_reduct=dim_reduct))
+    data = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, dim_reduct=dim_reduct, rs=rs))
     id_labels = data.collectAsMap()
     sc.stop()
     with open(LOGS + outname, 'w') as outfile: 
@@ -401,9 +404,11 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    for dr in [20, 50, 70, 100, 150, 200]:  
-        semeval_cluster_training(semeval2010=True, dim_reduct=dr)
-        semeval_cluster_test(semeval2010=True, dim_reduct=dr)
+    #for dr in [20, 50, 70, 100, 150, 200]:  
+    dr = 100
+    for rs in range(10): 
+        semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=rs)
+        semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=rs)
 
 if __name__ == "__main__":
     main()

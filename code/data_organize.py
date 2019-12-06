@@ -9,7 +9,6 @@ use Python 3.
 """
 import json
 import time
-from tqdm import tqdm
 import re
 import string
 import os
@@ -323,7 +322,7 @@ def filter_ukwac():
     for f in os.listdir(directory): 
         if f.endswith('.xml'): 
             target_set.add(f.replace('.xml', ''))
-    data = sc.textFile(DATA + 'ukwac_preproc.gz')
+    data = sc.textFile(DATA + 'ukwac_preproc')
     data = data.filter(lambda line: not line.startswith("CURRENT URL "))
     data = data.flatMap(partial(sentences_with_target_words, target_set=target_set))
     data = data.collect()
@@ -345,10 +344,11 @@ def prep_finetuning():
     all_data.coalesce(1).saveAsTextFile(LOGS + 'finetune_input')
 
 def temp(): 
-    data = sc.textFile(SR_FOLDER_MONTH + 'askreddit/RC_sample') 
-    data = data.flatMap(lambda line: [(w, 1) for w in line.split()])
-    data = data.reduceByKey(lambda n1, n2: n1 + n2)
-    data = data.collectAsMap()
+    for i in range(100): 
+        data = sc.textFile(SR_FOLDER_MONTH + 'askreddit/RC_sample') 
+        data = data.flatMap(lambda line: [(w, 1) for w in line.split()])
+        data = data.reduceByKey(lambda n1, n2: n1 + n2)
+        data = data.collectAsMap()
     print(len(data.keys()))
     print("DONEEEE")  
     
@@ -356,9 +356,9 @@ def main():
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    prep_finetuning()
+    #prep_finetuning()
     #filter_ukwac()
-    #temp()
+    temp()
     sc.stop()
 
 if __name__ == '__main__':
