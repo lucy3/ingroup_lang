@@ -303,10 +303,21 @@ def sentences_with_target_words(line, target_set=set()):
        tokens = set(word_tokenize(s.lower()))
        for item in target_set: 
            lemma = item.split('.')[0]
+           pos = item.split('.')[1]
+           if pos == 'j': pos = 'a' # adjective
            for tok in tokens: 
-               if wnl.lemmatize(tok) == lemma: 
+               if wnl.lemmatize(tok, pos) == lemma: 
                    ret.append((lemma, tok, s))
     return ret
+
+def count_ukwac_lemmas(tup): 
+    """
+    This checks that we have enough examples
+    of each lemma in our dataset for sense induction. 
+    We hope to have >500 examples. 
+    """
+    lemma = tup[0]
+    return (lemma, 1)
 
 def filter_ukwac(): 
     """
@@ -325,10 +336,16 @@ def filter_ukwac():
     data = sc.textFile(DATA + 'ukwac_preproc')
     data = data.filter(lambda line: not line.startswith("CURRENT URL "))
     data = data.flatMap(partial(sentences_with_target_words, target_set=target_set))
+    data = data.sample(False,0.25,0)
+    counts = data.map(count_ukwac_lemmas) 
+    counts = counts.reduceByKey(lambda n1, n2: n1 + n2)
+    counts = counts.collectAsMap()
     data = data.collect()
     with open(LOGS + 'ukwac2.txt', 'w') as outfile: 
         for item in data: 
             outfile.write(item[0] + '\t' + item[1] + '\t' + item[2] + '\n')
+    for lemma in counts: 
+        print(lemma, counts[lemma])
 
 def prep_finetuning(): 
     """
@@ -341,7 +358,9 @@ def prep_finetuning():
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
         rdds.append(data)
     all_data = sc.union(rdds)
-    all_data.coalesce(1).saveAsTextFile(LOGS + 'finetune_input')
+    test, train = all_data.randomSplit(weights=[0.1, 0.9], seed=1) 
+    test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test')
+    train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train')
 
 def temp(): 
     for i in range(100): 
@@ -357,8 +376,8 @@ def main():
     #create_subreddit_docs()
     #create_sr_user_docs() 
     #prep_finetuning()
-    #filter_ukwac()
-    temp()
+    filter_ukwac()
+    #temp()
     sc.stop()
 
 if __name__ == '__main__':

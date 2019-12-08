@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=finetune_prep
+#SBATCH --job-name=ukwac
 #SBATCH --partition=savio2
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1

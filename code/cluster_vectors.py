@@ -227,10 +227,10 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0):
     conf = SparkConf()
     sc = SparkContext(conf=conf)
     if semeval2010: 
-        outname = 'semeval2010_centroids/'
+        outname = 'semeval2010/semeval2010_centroids/'
         data = sc.textFile(SEMEVAL2010_TRAIN_VECTORS)
     else: 
-        outname = 'semeval2013_centroids/'
+        outname = 'semeval2013/semeval2013_centroids/'
         data = sc.textFile(SEMEVAL2013_TRAIN_VECTORS)
     data = data.filter(semeval_lemmas_of_interest)
     data = data.map(get_semeval_vector)
@@ -255,10 +255,10 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0):
         pca = load(inpath)
         data = pca.transform(data)
     if semeval2010: 
-        centroids = np.load(LOGS + 'semeval2010_centroids/' + lemma + '_' + \
+        centroids = np.load(LOGS + 'semeval2010/semeval2010_centroids/' + lemma + '_' + \
              str(dim_reduct) + '_' + str(rs) + '.npy')
     else: 
-        centroids = np.load(LOGS + 'semeval2013_centroids/' + lemma + '_' + \
+        centroids = np.load(LOGS + 'semeval2013/semeval2013_centroids/' + lemma + '_' + \
              str(dim_reduct) + '_' + str(rs) + '.npy')
     assert data.shape[1] == centroids.shape[1]
     sims = cosine_similarity(data, centroids) # IDs x n_centroids
@@ -272,10 +272,10 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0):
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010_clusters' + str(dim_reduct) + '_' + str(rs)
+        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs)
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
-        outname = 'semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
+        outname = 'semeval2013/semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
         data = sc.textFile(SEMEVAL2013_TEST_VECTORS)
     data = data.filter(semeval_lemmas_of_interest)
     data = data.map(get_semeval_vector)
@@ -290,26 +290,25 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0):
             lemma = ID.split('_')[-2]
             outfile.write(lemma + ' ' + small_id + ' ' + lemma + str(label) + '\n')
 
-def read_labels_for_eval(): 
+def read_labels_for_eval(goldpath, mypath): 
     gold_labels = defaultdict(dict)
     my_labels = defaultdict(dict)
     gold_c = defaultdict(list)
     my_c = defaultdict(list)
-    goldpath = ROOT + 'SemEval-2013-Task-13-test-data/keys/gold/all.singlesense.key'
     labels = []
     with open(goldpath, 'r') as infile: 
         for line in infile: 
             contents = line.strip().split()
             lemma = contents[0]
             instance = contents[1]
-            label = contents[2].split('/')[0]
+            label = contents[2]
             if label not in labels: 
                 labels.append(label)
             i = labels.index(label)
             gold_labels[lemma][instance] = set([i])
             gold_c[i].append(instance)
     labels = []  
-    with open(LOGS + 'semeval_test_clusters20', 'r') as infile: 
+    with open(mypath, 'r') as infile: 
         for line in infile: 
             contents = line.strip().split()
             lemma = contents[0]
@@ -324,81 +323,13 @@ def read_labels_for_eval():
     print("num gold clusters", len(gold_c), "num my clusters", len(my_c))
     return gold_labels, my_labels
 
-def test_nmi(): 
-    """
-    Sanity check nmi by 
-    """
-    gold_labels = defaultdict(dict)
-    my_labels = defaultdict(dict)
-    gold_c = defaultdict(list)
-    my_c = defaultdict(list)
-    goldpath = ROOT + 'SemEval-2013-Task-13-test-data/keys/gold/all.singlesense.key'
-    labels = []
-    with open(goldpath, 'r') as infile: 
-        for line in infile: 
-            contents = line.strip().split()
-            lemma = contents[0]
-            instance = contents[1]
-            label = contents[2].split('/')[0]
-            if label not in labels: 
-                labels.append(label)
-            i = labels.index(label)
-            gold_labels[lemma][instance] = set([i])
-            gold_c[i].append(instance) 
-    labels = []
-    with open(ROOT + 'SemEval-2013-Task-13-test-data/keys/systems/AI-KU/base/y-22-cluster-test.key', 'r') as infile: 
-        for line in infile: 
-            contents = line.strip().split()
-            lemma = contents[0]
-            instance = contents[1]
-            labels = contents[2:]
-            m = 0
-            m_label = '' 
-            for l in labels: 
-                label = l.split('/')[0]
-                rating = float(l.split('/')[1])
-                if rating > m: 
-                    m = rating
-                    m_label = label
-            if instance not in gold_labels[lemma]: continue # only evaluate on things in gold
-            if label not in labels: 
-                labels.append(label)
-            i = labels.index(label)
-            my_labels[lemma][instance] = set([i])
-            my_c[m_label].append(instance) 
-    print("num gold clusters", len(gold_c), "num my clusters", len(my_c))
-    return gold_labels, my_labels
-
-def evaluate_nmi(gold_labels, my_labels): 
-    print("calculating nmi...") 
-    nmis = []
-    for lemma in gold_labels:
-        gold = []
-        mine = []
-        for instance in gold_labels[lemma]:
-            gold.append(list(gold_labels[lemma][instance])[0])
-            mine.append(list(my_labels[lemma][instance])[0])
-        nmis.append(normalized_mutual_info_score(gold, mine, average_method = 'max'))
-    print("NMI:", np.mean(nmis))
-
-def evaluate_bcubed(gold_labels, my_labels): 
-    print("calculating bcubed...")
-    precisions = []
-    recalls = []
-    fscores = []
-    for lemma in gold_labels: 
-        precision = bcubed.precision(my_labels[lemma], gold_labels[lemma])
-        recall = bcubed.recall(my_labels[lemma], gold_labels[lemma])
-        precisions.append(precision)
-        recalls.append(recall)
-        fscores.append(bcubed.fscore(precision, recall))
-    print("Precision:", np.mean(precisions), "Recall:", np.mean(recalls), "F-score:", np.mean(fscores))
+def count_centroids(dim_reduct=100, rs=0): 
+    for f in os.listdir(LOGS + 'semeval2010/semeval2010_centroids/'):
+        if f.endswith('_' + str(dim_reduct) + '_' + str(rs) + '.npy'): 
+            centroids = np.load(f) 
+            lemma = f.split('_')[0] 
+            print(lemma, centroids.shape[0])
  
-def evaluate_clustering(): 
-    gold_labels, my_labels = read_labels_for_eval() 
-    evaluate_nmi(gold_labels, my_labels)
-    evaluate_bcubed(gold_labels, my_labels)
-
 def main(): 
     #find_semeval_dups(semeval2010=True)
     #get_dup_mapping()
@@ -409,6 +340,9 @@ def main():
     for rs in range(10): 
         semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=rs)
         semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=rs)
+    #count_centroids() 
+    #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
+    #    LOGS + 'semeval2010/semeval2010_clusters100_0')
 
 if __name__ == "__main__":
     main()

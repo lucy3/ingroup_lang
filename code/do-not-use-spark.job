@@ -2,17 +2,17 @@
 #SBATCH --job-name=test_spark
 #SBATCH --partition=savio2
 #SBATCH --time=3-00:00:00
-#SBATCH --nodes=4
+#SBATCH --nodes=1
 
 module load java
 
 time /global/home/users/lucy3_li/spark-2.4.4-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 64G --driver-memory 64G /global/scratch/lucy3_li/ingroup_lang/code/data_organize.py
 
-module load java spark/2.1.0 python/2.7
-source /global/home/groups/allhands/bin/spark_helper.sh
+#module load java spark/2.1.0 python/2.7
+#source /global/home/groups/allhands/bin/spark_helper.sh
 
-spark-start
+#spark-start
 
-time spark-submit --master $SPARK_URL --executor-memory 32G --driver-memory 32G /global/scratch/lucy3_li/ingroup_lang/code/data_organize.py
+#time spark-submit --master $SPARK_URL --executor-memory 32G --driver-memory 32G /global/scratch/lucy3_li/ingroup_lang/code/data_organize.py
 
-spark-stop
+#spark-stop

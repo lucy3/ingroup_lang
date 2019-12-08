@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from nltk.stem import WordNetLemmatizer
 
 sem_eval_trial_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
-sem_eval_train = '' # TODO
+sem_eval_train = '/global/scratch/lucy3_li/ingroup_lang/logs/ukwac2.txt' # TODO
 sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
 sem_eval_2010_train = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/training_data/'
 sem_eval_2010_test = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/test_data/'
@@ -21,7 +21,6 @@ batch_size=32
 dropout_rate=0.25
 bert_dim=768
 
-start_wordpieces = set()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -51,8 +50,6 @@ class BertEmbeddings():
                 tree = ET.parse(sem_eval_2010_test + pos + '/' + f)
                 root = tree.getroot()
                 lemma = f.replace('.xml', '') 
-                toks = self.tokenizer.tokenize(lemma)
-                if len(toks) > 1: start_wordpieces.add(toks[0])
                 for instance in root: 
                     tag = instance.tag
                     ID = tag + '_' + lemma + '_' + tag.split('.')[0]
@@ -70,8 +67,6 @@ class BertEmbeddings():
                 tree = ET.parse(sem_eval_2010_train + pos + '/' + f)
                 root = tree.getroot()
                 lemma = f.replace('.xml', '')
-                toks = self.tokenizer.tokenize(lemma)
-                if len(toks) > 1: start_wordpieces.add(toks[0])
                 for instance in root: 
                     tag = instance.tag
                     ID = tag + '_' + lemma + '_' + tag.split('.')[0]
@@ -84,7 +79,7 @@ class BertEmbeddings():
         """
         Each word has its own xml file. 
         """
-        print("Reading sem eval test sentences...") 
+        print("Reading sem eval 2013 test sentences...") 
         sentences = []
         for f in os.listdir(sem_eval_test): 
             tree = ET.parse(sem_eval_test + f)
@@ -100,7 +95,17 @@ class BertEmbeddings():
         '''
         The ID is the line number 
         '''
-        pass
+        print("Reading sem eval 2013 train sentences...")
+        sentences = []
+        with open(sem_eval_train, 'r') as infile: 
+            i = 0
+            for line in infile: 
+                contents = line.strip().split('\t') 
+                ID = str(i) + '_' + contents[0] + '_' + contents[1]
+                sent = ' '.join(contents[2:])
+                i += 1
+                sentences.append((ID, "[CLS] " + sent + " [SEP]"))
+        return sentences
     
     def read_semeval_trial_sentences(self): 
         '''
@@ -277,6 +282,9 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
         else: 
             outfile = root_path + 'logs/semeval2013_train_bert'
             sentences = embeddings_model.read_semeval_train_sentences()
+    print(sentences[0])
+    print(sentences[1]) 
+    '''
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
@@ -285,12 +293,13 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
     embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, \
             outfile, only_save_lemmas=only_save_lemmas)
     print("TOTAL TIME:", time.time() - time2)
+    '''
 
  
 def main(): 
     #run_bert_on_reddit()
     #run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True)
-    run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
+    run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=True)
 
 if __name__ == "__main__":
     main()
