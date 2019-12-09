@@ -335,11 +335,10 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    #for dr in [20, 50, 70, 100, 150, 200]:  
-    dr = 100
-    for rs in range(10): 
-        semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=rs)
-        semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=rs)
+    for dr in [20, 50, 70, 100, 150, 200]:  
+        for rs in range(10): 
+            semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=rs)
+            semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=rs)
     #count_centroids() 
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_0')
