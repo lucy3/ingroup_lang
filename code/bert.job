@@ -1,6 +1,6 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=savio_gpu_test#
+#SBATCH --job-name=bert
 # Partition:
 #SBATCH --partition=savio2_gpu
 #

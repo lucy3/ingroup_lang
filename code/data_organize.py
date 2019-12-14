@@ -307,7 +307,7 @@ def sentences_with_target_words(line, target_set=set()):
            if pos == 'j': pos = 'a' # adjective
            for tok in tokens: 
                if wnl.lemmatize(tok, pos) == lemma: 
-                   ret.append((lemma, tok, s))
+                   ret.append((lemma + '.' + pos, tok, s))
     return ret
 
 def count_ukwac_lemmas(tup): 
@@ -336,7 +336,7 @@ def filter_ukwac():
     data = sc.textFile(DATA + 'ukwac_preproc')
     data = data.filter(lambda line: not line.startswith("CURRENT URL "))
     data = data.flatMap(partial(sentences_with_target_words, target_set=target_set))
-    data = data.sample(False,0.25,0)
+    data = data.sample(False,0.05,0)
     counts = data.map(count_ukwac_lemmas) 
     counts = counts.reduceByKey(lambda n1, n2: n1 + n2)
     counts = counts.collectAsMap()
