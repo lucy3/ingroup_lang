@@ -94,6 +94,8 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, nor
         gaps[i] = gap
         labels[k] = km.labels_
         centroids[k] = km.cluster_centers_
+    print("GAP STATISTIC:", gaps) # TODO: remove this line
+    print("S:", s) # TODO: remove
     for i in range(len(ks) - 1): 
         k = ks[i] 
         if gaps[i] >= gaps[i+1] - s[i+1]:
@@ -296,7 +298,7 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0, norma
         inname = LOGS + 'semeval2013/semeval2013_centroids/'
     if normalize: 
         centroids = np.load(inname + lemma + '_' + \
-             str(dim_reduct) + '_' + str(rs) + '_normalize.npy')
+             str(dim_reduct) + '_' + str(rs) + '_normalized.npy')
     else: 
         centroids = np.load(inname + lemma + '_' + \
              str(dim_reduct) + '_' + str(rs) + '.npy')
@@ -383,10 +385,10 @@ def main():
     #semeval_clusters(test=True, dim_reduct=20)
     #for dr in [3, 4, 5, 7, 10]:  
     #    for rs in range(10): 
-    semeval_cluster_training(semeval2010=False, dim_reduct=20, rs=0, normalize=True)
-    semeval_cluster_test(semeval2010=False, dim_reduct=20, rs=0, normalize=True)
-    semeval_cluster_training(semeval2010=False, dim_reduct=3, rs=0, normalize=True)
-    semeval_cluster_test(semeval2010=False, dim_reduct=3, rs=0, normalize=True)
+    semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=1)
+    semeval_cluster_test(semeval2010=True, dim_reduct=2, rs=1)
+    #semeval_cluster_training(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
+    #semeval_cluster_test(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #count_centroids(dim_reduct=2, rs=0) 
     #semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=0)
     #semeval_cluster_test(semeval2010=True, dim_reduct=2, rs=0)
