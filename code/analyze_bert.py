@@ -18,6 +18,9 @@ LOGS = ROOT + 'logs/'
 conf = SparkConf()
 sc = SparkContext(conf=conf)
 
+from nltk.stem import WordNetLemmatizer
+wnl = WordNetLemmatizer()
+
 def get_word_subset(line, w): 
     contents = line.strip().split('\t') 
     word = contents[1]
@@ -110,11 +113,15 @@ def compare_word_across_subreddits(subreddit_list, word):
     if word == '!': word = 'exclaimmark'
     plt.savefig('../logs/bert_viz_single_word_' + word + '.png')
 
-def get_lemma_vectors(x, lemma): 
+def get_lemma_vectors(x, lemma, dataset): 
     contents = x.strip().split('\t') 
     token = contents[0].split('_')[-1]
     l = contents[0].split('_')[-2]
-    return token == contents[1] and l == lemma
+    if dataset == 'semeval2010': 
+        pos = l.split('.')[1]
+        return token == wnl.lemmatize(contents[1], pos) and l == lemma
+    elif dataset == 'semeval2013': 
+        return token == contents[1] and l == lemma
 
 def compare_semeval2013_lemmas(lemma, test=False): 
     X = []
@@ -155,17 +162,24 @@ def compare_semeval2013_lemmas(lemma, test=False):
     else: 
         plt.savefig('../logs/bert_viz_single_lemma_' + lemma + '_semeval.png')
 
-def plot_semeval_clusters(lemma): 
+def plot_semeval_clusters(lemma, dataset, cluster_path): 
     """
     Plot gold and my clusters on the same plot
+    Shapes are gold clusters
+    Colors are my clusters
     """
     marker_options = ['o', 'v', '^', '<', '>', 's', 'P', '*', 'X', 'D']
     color_options = ['tab:blue', 'tab:orange', 'tab:green', 
          'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 
          'tab:gray', 'tab:olive', 'tab:cyan']
-    infile = LOGS + 'semeval2013_test_bert3'
+    if dataset == 'semeval2013': 
+        infile = LOGS + 'semeval2013/semeval2013_test_bert3'
+        goldpath = ROOT + 'SemEval-2013-Task-13-test-data/keys/gold/all.singlesense.key'
+    elif dataset == 'semeval2010': 
+        infile = LOGS + 'semeval2010/semeval2010_test_bert2'
+        goldpath = ROOT + 'semeval-2010-task-14/evaluation/unsup_eval/keys/all.key'
     data = sc.textFile(infile) 
-    data = data.filter(lambda x: get_lemma_vectors(x, lemma))
+    data = data.filter(lambda x: get_lemma_vectors(x, lemma, dataset))
     data = data.map(get_instance_vectors)
     vecs = data.collectAsMap()
     colors = []
@@ -174,18 +188,17 @@ def plot_semeval_clusters(lemma):
     labels2 = []
     gold_clusters = defaultdict(list)
     my_labels = {}
-    goldpath = ROOT + 'SemEval-2013-Task-13-test-data/keys/gold/all.singlesense.key'
     with open(goldpath, 'r') as infile: 
         for line in infile:  
             contents = line.strip().split()
             instance = contents[1]
             if contents[0] != lemma: continue
-            label = contents[2].split('/')[0]
+            label = contents[2]
             if label not in labels1: 
                 labels1.append(label)
             i = labels1.index(label)
             gold_clusters[i].append(instance)
-    with open(LOGS + 'semeval_test_clusters', 'r') as infile: 
+    with open(LOGS + dataset + '/' + cluster_path, 'r') as infile: 
         for line in infile: 
             contents = line.strip().split()
             instance = contents[1]
@@ -212,7 +225,7 @@ def plot_semeval_clusters(lemma):
             idx.append(instances.index(k))
             colors.append(color_options[my_labels[k]])
         ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=colors, marker=marker_options[i])
-    plt.savefig('../logs/bert_' + lemma + '_semeval2013_test.png')
+    plt.savefig('../logs/bert_' + lemma + '_' + dataset + '_' + cluster_path + '.png')
 
 def main():
     #sanity_check()
@@ -224,7 +237,9 @@ def main():
     #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'fire')
     #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'sick')
     #compare_semeval2013_lemmas('add.v', test=True)
-    plot_semeval_clusters('add.v') 
+    plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters20_0')
+    plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0')
+    plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0_normalize') 
     sc.stop()
 
 if __name__ == '__main__': 

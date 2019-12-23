@@ -9,7 +9,10 @@ ROOT = '/data0/lucy/ingroup_lang/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
 LOGS = ROOT + 'logs/'
 
-def count_tokens(): 
+def count_tokens():
+    '''
+    TODO 
+    ''' 
     pass          
     
 def count_comments(): 

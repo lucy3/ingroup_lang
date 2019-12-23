@@ -60,6 +60,9 @@ class BertEmbeddings():
         return sentences
 
     def read_semeval2010_train_sentences(self):
+        """
+        ID is id_lemma.pos_lemma
+        """
         print("Reading sem eval 2010 train sentences...")
         sentences = []
         for pos in ['verbs', 'nouns']: 
@@ -78,6 +81,7 @@ class BertEmbeddings():
     def read_semeval_test_sentences(self): 
         """
         Each word has its own xml file. 
+        ID is id_lemma.pos_token
         """
         print("Reading sem eval 2013 test sentences...") 
         sentences = []
@@ -93,7 +97,7 @@ class BertEmbeddings():
 
     def read_semeval_train_sentences(self):
         '''
-        The ID is the line number 
+        The ID is the linenumber_lemma.pos_token 
         '''
         print("Reading sem eval 2013 train sentences...")
         sentences = []
@@ -233,8 +237,9 @@ class BertEmbeddings():
                             next_w = words[sent_i][token_i+1]
                         if '##' not in w and '##' not in next_w: 
                             ID = users[sent_i].split('_')
-                            lemma = ID[-1]
-                            pos = ID[-2].split('.')[-1]
+                            lemma = ID[-2].split('.')[0]
+                            pos = ID[-2].split('.')[1]
+                            if pos == 'j': pos = 'a'
                             if wnl.lemmatize(w, pos) != lemma: continue
                     if w == '[CLS]' or w == '[SEP]': continue
                     hidden_layers = [] 
@@ -270,21 +275,18 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
     embeddings_model = BertEmbeddings()
     if test: 
         if twentyten:
-            outfile = root_path + 'logs/semeval2010_test_bert'
+            outfile = root_path + 'logs/semeval2010/semeval2010_test_bert'
             sentences = embeddings_model.read_semeval2010_test_sentences()
         else: 
-            outfile = root_path + 'logs/semeval2013_test_bert'
+            outfile = root_path + 'logs/semeval2013/semeval2013_test_bert'
             sentences = embeddings_model.read_semeval_test_sentences()
     else: 
         if twentyten: 
-            outfile = root_path + 'logs/semeval2010_train_bert' 
+            outfile = root_path + 'logs/semeval2010/semeval2010_train_bert' 
             sentences = embeddings_model.read_semeval2010_train_sentences()
         else: 
-            outfile = root_path + 'logs/semeval2013_train_bert'
+            outfile = root_path + 'logs/semeval2013/semeval2013_train_bert'
             sentences = embeddings_model.read_semeval_train_sentences()
-    print(sentences[0])
-    print(sentences[1]) 
-    '''
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = embeddings_model.get_batches(sentences, batch_size)
@@ -293,7 +295,6 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
     embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, \
             outfile, only_save_lemmas=only_save_lemmas)
     print("TOTAL TIME:", time.time() - time2)
-    '''
 
  
 def main(): 

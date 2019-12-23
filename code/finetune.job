@@ -3,13 +3,13 @@
 #SBATCH --job-name=finetune
 # Partition:
 #SBATCH --partition=savio2_gpu
+#SBATCH --account=fc_dbamman
 #
 # Wall clock limit:
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem=60G
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
