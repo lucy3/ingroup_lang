@@ -14,6 +14,6 @@
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
 
-python run_lm_finetuning.py --train_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_train/part-00000 --output_dir /global/scratch/lucy3_li/ingroup_lang/logs/finetuning/ --eval_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_test/part-00000 --model_name_or_path bert-base-uncased --mlm --do_train --do_eval --evaluate_during_training --do_lower_case --num_train_epochs 3 --learning_rate 1e-4 --weight_decay 0.01 --warmup_steps 10000 --adam_epsilon 1e-6
+python run_lm_finetuning.py --train_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_train/part-00000 --output_dir /global/scratch/lucy3_li/ingroup_lang/logs/finetuning/ --eval_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_test/part-00000 --model_name_or_path bert-base-uncased --mlm --do_train --do_eval --evaluate_during_training --do_lower_case --num_train_epochs 3 --learning_rate 5e-5 --weight_decay 0.01 --warmup_steps 10000 --adam_epsilon 1e-6 --gradient_accumulation_steps 8
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate
