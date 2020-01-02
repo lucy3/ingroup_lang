@@ -88,6 +88,7 @@ class TextDataset(Dataset):
                 self.examples = pickle.load(handle)
         else:
             logger.info("Creating features from dataset file at %s", directory)
+            print(2/0 + 'hi')
 
             self.examples = []
 
@@ -103,6 +104,8 @@ class TextDataset(Dataset):
 
                     assert len(text_ids) == block_size
                     self.examples.append(text_ids)
+                    if len(self.examples) % 1000000 == 0: 
+                        logger.info("Appended " + str(len(self.examples)) + " examples.")
 
             logger.info("Saving features into cached file %s", cached_features_file)
             with open(cached_features_file, 'wb') as handle:
