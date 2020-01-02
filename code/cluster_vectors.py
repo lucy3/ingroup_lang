@@ -94,10 +94,9 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, nor
         gaps[i] = gap
         labels[k] = km.labels_
         centroids[k] = km.cluster_centers_
-    print("GAP STATISTIC:", gaps) # TODO: remove this line
-    print("S:", s) # TODO: remove
     for i in range(len(ks) - 1): 
         k = ks[i] 
+        if k == 4: return (IDs, (labels[k], centroids[k])) # TODO: remove
         if gaps[i] >= gaps[i+1] - s[i+1]:
             return (IDs, (labels[k], centroids[k]))
     return (IDs, (labels[ks[-1]], centroids[ks[-1]]))
@@ -246,7 +245,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     conf = SparkConf()
     sc = SparkContext(conf=conf)
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_centroids/'
+        outname = 'semeval2010/semeval2010_centroids/fixedk4_' # TODO: change
         data = sc.textFile(SEMEVAL2010_TRAIN_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_centroids/'
@@ -293,7 +292,7 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0, norma
             pca = load(inpath)
             data = pca.transform(data)
     if semeval2010: 
-        inname = LOGS + 'semeval2010/semeval2010_centroids/'
+        inname = LOGS + 'semeval2010/semeval2010_centroids/fixedk4_' # TODO: change
     else: 
         inname = LOGS + 'semeval2013/semeval2013_centroids/'
     if normalize: 
@@ -314,7 +313,7 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0, normalize=Fal
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs)
+        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) + '_fixedk4' # TODO: change
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
@@ -385,8 +384,8 @@ def main():
     #semeval_clusters(test=True, dim_reduct=20)
     #for dr in [3, 4, 5, 7, 10]:  
     #    for rs in range(10): 
-    semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=1)
-    semeval_cluster_test(semeval2010=True, dim_reduct=2, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
+    semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
     #semeval_cluster_training(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #semeval_cluster_test(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #count_centroids(dim_reduct=2, rs=0) 
