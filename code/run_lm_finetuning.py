@@ -73,6 +73,10 @@ print('')
 
 
 class TextDataset(Dataset):
+    '''
+    We modify the original huggingface file so that each comment is its own example
+    and we add padding. Later, we only mask out words that are not the pad_token.
+    '''
     def __init__(self, tokenizer, args, file_path='train', block_size=512):
         assert os.path.isfile(file_path)
         directory, filename = os.path.split(file_path)
@@ -84,18 +88,24 @@ class TextDataset(Dataset):
                 self.examples = pickle.load(handle)
         else:
             logger.info("Creating features from dataset file at %s", directory)
+            print(2/0 + 'hi')
 
             self.examples = []
+
+            logger.info("Reading in file and converting tokens to IDs.")
+            pad_token = tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0]
             with open(file_path, encoding="utf-8") as f:
-                text = f.read()
+                for line in f: 
+                    text = line.strip()
+                    text_ids = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(text))[:block_size-2]
+                    text_ids = tokenizer.build_inputs_with_special_tokens(text_ids)
+                    for k in range(len(text_ids), block_size): 
+                        text_ids.append(pad_token)
 
-            tokenized_text = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(text))
-
-            for i in range(0, len(tokenized_text)-block_size+1, block_size): # Truncate in block of block_size
-                self.examples.append(tokenizer.build_inputs_with_special_tokens(tokenized_text[i:i+block_size]))
-            # Note that we are loosing the last truncated example here for the sake of simplicity (no padding)
-            # If your dataset is small, first you should loook for a bigger one :-) and second you
-            # can change this behavior by adding (model specific) padding.
+                    assert len(text_ids) == block_size
+                    self.examples.append(text_ids)
+                    if len(self.examples) % 1000000 == 0: 
+                        logger.info("Appended " + str(len(self.examples)) + " examples.")
 
             logger.info("Saving features into cached file %s", cached_features_file)
             with open(cached_features_file, 'wb') as handle:
@@ -155,9 +165,17 @@ def mask_tokens(inputs, tokenizer, args):
     labels = inputs.clone()
     # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
     probability_matrix = torch.full(labels.shape, args.mlm_probability)
+
+    pad_token = tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0]
+
     special_tokens_mask = [tokenizer.get_special_tokens_mask(val, already_has_special_tokens=True) for val in labels.tolist()]
+
     probability_matrix.masked_fill_(torch.tensor(special_tokens_mask, dtype=torch.bool), value=0.0)
-    masked_indices = torch.bernoulli(probability_matrix).bool()
+    padding_mask = (labels == pad_token)
+    probability_matrix.masked_fill_(torch.tensor(padding_mask, dtype=torch.bool), value=0.0)
+
+    masked_indices = torch.bernoulli(probability_matrix).bool() 
+
     labels[~masked_indices] = -1  # We only compute loss on masked tokens
 
     # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
