@@ -85,8 +85,7 @@ def kmeans_with_aic(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=Fal
         k = ks[i] 
         aic = rss[i] # + lamb*data.shape[1]*k
         aics.append(aic)
-    print("DATA SHAPE:", data.shape)
-    print("AICS:", aics)  
+    print(lemma, "AICS:", aics)  
     best_k = np.argmin(aics)
     return (IDs, (labels[ks[best_k]], centroids[ks[best_k]]))
 
@@ -426,6 +425,9 @@ def main():
     #for dr in [3, 4, 5, 7, 10]:  
     #    for rs in range(10): 
     semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=20, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
+
     #semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
     #semeval_cluster_training(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #semeval_cluster_test(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
