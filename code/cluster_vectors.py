@@ -76,18 +76,17 @@ def kmeans_with_aic(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=Fal
     for i, k in enumerate(ks):
         km = KMeans(k, n_jobs=-1, random_state=rs)
         km.fit(data)
-        rss[k] = km.inertia_
+        rss[i] = km.inertia_
         labels[k] = km.labels_
         centroids[k] = km.cluster_centers_
     aics = []
     lamb = 2
     for i in range(len(ks)): 
         k = ks[i] 
-        aic = rss[k] # + lamb*data.shape[1]*k
+        aic = rss[i] # + lamb*data.shape[1]*k
         aics.append(aic)
     print("DATA SHAPE:", data.shape)
-    print("AICS:", aics) 
-    exit() # TODO: delete 
+    print("AICS:", aics)  
     best_k = np.argmin(aics)
     return (IDs, (labels[ks[best_k]], centroids[ks[best_k]]))
 
@@ -426,8 +425,8 @@ def main():
     #semeval_clusters(test=True, dim_reduct=20)
     #for dr in [3, 4, 5, 7, 10]:  
     #    for rs in range(10): 
-    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
-    semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=1)
+    #semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
     #semeval_cluster_training(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #semeval_cluster_test(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #count_centroids(dim_reduct=2, rs=0) 
