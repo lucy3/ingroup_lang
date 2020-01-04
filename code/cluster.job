@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=2013cluster
+#SBATCH --job-name=2010cluster
 #SBATCH --partition=savio2_bigmem
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1

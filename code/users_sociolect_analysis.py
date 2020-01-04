@@ -13,6 +13,7 @@ import pandas as pd
 from scipy.stats import zscore 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import statsmodels.api as sm
+from scipy.stats import mannwhitneyu
 root = '/data0/lucy/ingroup_lang/'
 
 def get_values(path, feature_dict): 
@@ -131,12 +132,36 @@ def predict_ols(sociolect_metric):
     results = model.fit()
     print(feature_names)
     print(results.summary())
+    
+def run_u_test(name, col, X, y_bin, alternative): 
+    '''
+    first argument of mannwhitneyu is less sociolect-y 
+    communities, second argument is more sociolect-y communities
+    '''
+    print(name)
+    x = X[np.argwhere(y_bin == 0),col]
+    y = X[np.argwhere(y_bin == 1),col]
+    res = mannwhitneyu(x, y, alternative=alternative)
+    print(res)
+    
+def u_tests(sociolect_metric): 
+    '''
+    less sociolect-y communities are larger, less active, less loyal, less dense
+    '''
+    print(sociolect_metric)
+    X, y, y_bin, feature_names = get_data(sociolect_metric)
+    run_u_test('community size', feature_names.index('community size'), X, y_bin, 'greater')
+    run_u_test('user activity', feature_names.index('user activity'), X, y_bin, 'less')
+    run_u_test('user loyalty 50', feature_names.index('user loyalty 50'), X, y_bin, 'less')
+    run_u_test('commentor density', feature_names.index('commentor density'), X, y_bin, 'less')
 
 def main(): 
     #predict_sociolects('pmi')
     #predict_sociolects('tfidf')
-    predict_ols('pmi')
-    predict_ols('tfidf')
+    #predict_ols('pmi')
+    #predict_ols('tfidf')
+    u_tests('pmi')
+    u_tests('tfidf')
 
 if __name__ == "__main__":
     main()

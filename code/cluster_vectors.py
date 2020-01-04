@@ -50,6 +50,46 @@ def get_semeval_vector(line):
     vector = np.array([[float(i) for i in contents[2].split()]])
     return (lemma, ([ID], vector))
 
+def kmeans_with_aic(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
+    lemma = tup[0]
+    IDs = tup[1][0]
+    data = tup[1][1]
+    if dim_reduct is not None:
+        if normalize: 
+            outpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
+                str(dim_reduct) + '_' + str(rs) + '_normalize.joblib' 
+            scaler_path = LOGS + 'standardscaler/' + str(semeval2010) + '_' + lemma + '_' + \
+                str(dim_reduct) + '_' + str(rs) + '_normalize.joblib' 
+            scaler = StandardScaler()
+            data = scaler.fit_transform(data) 
+            dump(scaler, scaler_path)
+        else:  
+            outpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
+                str(dim_reduct) + '_' + str(rs) + '.joblib'
+        pca = PCA(n_components=dim_reduct, random_state=rs)
+        data = pca.fit_transform(data)
+        dump(pca, outpath)
+    ks = range(2, 10)
+    labels = {} # k : km.labels_
+    centroids = {} 
+    rss = np.zeros(len(ks))
+    for i, k in enumerate(ks):
+        km = KMeans(k, n_jobs=-1, random_state=rs)
+        km.fit(data)
+        rss[i] = km.inertia_
+        labels[k] = km.labels_
+        centroids[k] = km.cluster_centers_
+    aics = []
+    lamb = 2
+    for i in range(len(ks)): 
+        k = ks[i] 
+        aic = rss[i] # + lamb*data.shape[1]*k
+        aics.append(aic)
+    print(lemma, "AICS:", aics)  
+    best_k = np.argmin(aics)
+    return (IDs, (labels[ks[best_k]], centroids[ks[best_k]]))
+
+
 def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
     """
     Based off of https://anaconda.org/milesgranger/gap-statistic/notebook
@@ -94,10 +134,9 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, nor
         gaps[i] = gap
         labels[k] = km.labels_
         centroids[k] = km.cluster_centers_
-    print("GAP STATISTIC:", gaps) # TODO: remove this line
-    print("S:", s) # TODO: remove
     for i in range(len(ks) - 1): 
         k = ks[i] 
+        #if k == 4: return (IDs, (labels[k], centroids[k])) 
         if gaps[i] >= gaps[i+1] - s[i+1]:
             return (IDs, (labels[k], centroids[k]))
     return (IDs, (labels[ks[-1]], centroids[ks[-1]]))
@@ -258,7 +297,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    data = data.map(partial(kmeans_with_gap_statistic, dim_reduct=dim_reduct, 
+    data = data.map(partial(kmeans_with_aic, dim_reduct=dim_reduct, 
          semeval2010=semeval2010, rs=rs, normalize=normalize))
     clustered_IDs = data.collect()
     sc.stop() 
@@ -314,7 +353,7 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0, normalize=Fal
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs)
+        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) 
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
@@ -386,7 +425,10 @@ def main():
     #for dr in [3, 4, 5, 7, 10]:  
     #    for rs in range(10): 
     semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=1)
-    semeval_cluster_test(semeval2010=True, dim_reduct=2, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=20, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
+
+    #semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
     #semeval_cluster_training(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #semeval_cluster_test(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
     #count_centroids(dim_reduct=2, rs=0) 
