@@ -12,7 +12,7 @@ import time
 import re
 import string
 import os
-from pyspark import SparkConf, SparkContext
+#from pyspark import SparkConf, SparkContext
 from collections import Counter
 import random
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -23,7 +23,8 @@ from nltk.stem import WordNetLemmatizer
 wnl = WordNetLemmatizer()
 
 #ROOT = '/data0/lucy/ingroup_lang/'
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -32,8 +33,8 @@ SR_FOLDER2 = ROOT + 'subreddits2/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
 reddits = set()
 
 def clean_up_text(text): 
@@ -370,15 +371,40 @@ def temp():
         data = data.collectAsMap()
     print(len(data.keys()))
     print("DONEEEE")  
+
+def divide_chunks(l, n): 
+    # looping till length l 
+    for i in range(0, len(l), n):  
+        yield l[i:i + n] 
+
+def prep_finetuning2(num_epochs=3): 
+    '''
+    Take the finetuning file, shuffle it three times and output as chunks
+    '''
+    filename = LOGS + 'finetune_input_train/part-00000'
+    print("Reading in file...") 
+    with open(filename, 'r') as infile: 
+        lines = infile.readlines()
+    for i in range(num_epochs): 
+        print("Getting epoch", i)
+        random.shuffle(lines)
+        new_filename = filename + '_epoch' + str(i)
+        j = 0
+        print("Dividing chunks...") 
+        for chunk in divide_chunks(lines, 10000000): 
+            with open(new_filename + '_chunk' + str(j), 'w') as outfile: 
+                outfile.writelines(chunk)
+            j += 1
     
 def main(): 
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
     #prep_finetuning()
-    filter_ukwac()
+    #filter_ukwac()
     #temp()
-    sc.stop()
+    prep_finetuning2(num_epochs=3)
+    #sc.stop()
 
 if __name__ == '__main__':
     main()
