@@ -255,8 +255,8 @@ class BertEmbeddings():
 
 def run_bert_on_reddit(): 
     root_path = '/global/scratch/lucy3_li/ingroup_lang/'
-    for subreddit in ['vegan', 'financialindependence', 'keto', 'applyingtocollege', 'fashionreps']: 
-        filename = root_path + 'subreddits_month/' + subreddit + '/RC_2019-05'
+    for subreddit in ['askreddit']: 
+        filename = root_path + 'subreddits_month/' + subreddit + '/RC_sample'
         start = time.time()
         embeddings_model = BertEmbeddings()
         sentences = embeddings_model.read_sentences(filename)
@@ -298,9 +298,9 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
 
  
 def main(): 
-    #run_bert_on_reddit()
+    run_bert_on_reddit()
     #run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True)
-    run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=True)
+    #run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=True)
 
 if __name__ == "__main__":
     main()

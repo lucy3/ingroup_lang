@@ -50,7 +50,7 @@ def get_semeval_vector(line):
     vector = np.array([[float(i) for i in contents[2].split()]])
     return (lemma, ([ID], vector))
 
-def kmeans_with_aic(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
+def kmeans_with_crit(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
     lemma = tup[0]
     IDs = tup[1][0]
     data = tup[1][1]
@@ -79,14 +79,13 @@ def kmeans_with_aic(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=Fal
         rss[i] = km.inertia_
         labels[k] = km.labels_
         centroids[k] = km.cluster_centers_
-    aics = []
-    lamb = 2
+    crits = []
+    lamb = 10000
     for i in range(len(ks)): 
         k = ks[i] 
-        aic = rss[i] # + lamb*data.shape[1]*k
-        aics.append(aic)
-    print(lemma, "AICS:", aics)  
-    best_k = np.argmin(aics)
+        crit = rss[i]  + lamb*k
+        crits.append(crit)
+    best_k = np.argmin(crits)
     return (IDs, (labels[ks[best_k]], centroids[ks[best_k]]))
 
 
@@ -297,7 +296,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    data = data.map(partial(kmeans_with_aic, dim_reduct=dim_reduct, 
+    data = data.map(partial(kmeans_with_crit, dim_reduct=dim_reduct, 
          semeval2010=semeval2010, rs=rs, normalize=normalize))
     clustered_IDs = data.collect()
     sc.stop() 
@@ -383,6 +382,8 @@ def read_labels_for_eval(goldpath, mypath):
     gold_c = defaultdict(list)
     my_c = defaultdict(list)
     labels = []
+    gold_lemma_labels = defaultdict(set)
+    my_lemma_labels = defaultdict(set)
     with open(goldpath, 'r') as infile: 
         for line in infile: 
             contents = line.strip().split()
@@ -393,6 +394,7 @@ def read_labels_for_eval(goldpath, mypath):
                 labels.append(label)
             i = labels.index(label)
             gold_labels[lemma][instance] = set([i])
+            gold_lemma_labels[lemma].add(label)
             gold_c[i].append(instance)
     labels = []  
     with open(mypath, 'r') as infile: 
@@ -406,8 +408,11 @@ def read_labels_for_eval(goldpath, mypath):
                 labels.append(label)
             i = labels.index(label)
             my_labels[lemma][instance] = set([i])
+            my_lemma_labels[lemma].add(label)
             my_c[label].append(instance) 
     print("num gold clusters", len(gold_c), "num my clusters", len(my_c))
+    for lemma in gold_lemma_labels: 
+        print(lemma, len(gold_lemma_labels[lemma]), len(my_lemma_labels[lemma]))
     return gold_labels, my_labels
 
 def count_centroids(dim_reduct=100, rs=0): 
@@ -422,20 +427,11 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    #for dr in [3, 4, 5, 7, 10]:  
-    #    for rs in range(10): 
-    semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=1)
-    semeval_cluster_training(semeval2010=True, dim_reduct=20, rs=1)
-    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
-
-    #semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
-    #semeval_cluster_training(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
-    #semeval_cluster_test(semeval2010=True, dim_reduct=3, rs=0, normalize=True)
-    #count_centroids(dim_reduct=2, rs=0) 
-    #semeval_cluster_training(semeval2010=True, dim_reduct=2, rs=0)
-    #semeval_cluster_test(semeval2010=True, dim_reduct=2, rs=0)
-    #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
-    #    LOGS + 'semeval2010/semeval2010_clusters100_0')
+    #for dr in [2, 20, 100]:  
+    #    semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=1)
+    #    semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=1)
+    read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
+        LOGS + 'semeval2010/semeval2010_clusters100_1')
 
 if __name__ == "__main__":
     main()
