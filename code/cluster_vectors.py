@@ -50,6 +50,10 @@ def get_semeval_vector(line):
     vector = np.array([[float(i) for i in contents[2].split()]])
     return (lemma, ([ID], vector))
 
+def xmeans_helper(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
+    pass
+    
+
 def kmeans_with_crit(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
     lemma = tup[0]
     IDs = tup[1][0]
@@ -430,8 +434,8 @@ def main():
     #for dr in [2, 20, 100]:  
     #    semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=1)
     #    semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=1)
-    read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
-        LOGS + 'semeval2010/semeval2010_clusters100_1')
+    #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
+    #    LOGS + 'semeval2010/semeval2010_clusters100_1')
 
 if __name__ == "__main__":
     main()
