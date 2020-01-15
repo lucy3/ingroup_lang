@@ -11,11 +11,13 @@ import time
 import xml.etree.ElementTree as ET
 from nltk.stem import WordNetLemmatizer
 
+root = '/global/scratch/lucy3_li/'
+#root = '/data0/lucy/'
 sem_eval_trial_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
-sem_eval_train = '/global/scratch/lucy3_li/ingroup_lang/logs/ukwac2.txt' # TODO
+sem_eval_train = root + 'ingroup_lang/logs/ukwac2.txt' # TODO
 sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
-sem_eval_2010_train = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/training_data/'
-sem_eval_2010_test = '/global/scratch/lucy3_li/ingroup_lang/semeval-2010-task-14/test_data/'
+sem_eval_2010_train = root + 'ingroup_lang/semeval-2010-task-14/training_data/'
+sem_eval_2010_test = root + 'ingroup_lang/semeval-2010-task-14/test_data/'
 
 batch_size=32
 dropout_rate=0.25
@@ -254,7 +256,7 @@ class BertEmbeddings():
         ofile.close()
 
 def run_bert_on_reddit(): 
-    root_path = '/global/scratch/lucy3_li/ingroup_lang/'
+    root_path = root + 'ingroup_lang/'
     for subreddit in ['askreddit']: 
         filename = root_path + 'subreddits_month/' + subreddit + '/RC_sample'
         start = time.time()
@@ -270,7 +272,7 @@ def run_bert_on_reddit():
         print("TOTAL TIME:", time.time() - time2)
 
 def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
-    root_path = '/global/scratch/lucy3_li/ingroup_lang/' 
+    root_path = root + 'ingroup_lang/' 
     start = time.time()
     embeddings_model = BertEmbeddings()
     if test: 
