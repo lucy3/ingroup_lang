@@ -20,6 +20,8 @@ import os.path
 from joblib import dump, load
 from nltk.stem import WordNetLemmatizer
 from sklearn.preprocessing import StandardScaler
+from pyclustering.cluster.xmeans import xmeans
+from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 
 wnl = WordNetLemmatizer()
 
@@ -51,8 +53,35 @@ def get_semeval_vector(line):
     return (lemma, ([ID], vector))
 
 def xmeans_helper(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
-    pass
-    
+    lemma = tup[0]
+    IDs = tup[1][0]
+    data = tup[1][1]
+    if dim_reduct is not None:
+        if normalize: 
+            outpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
+                str(dim_reduct) + '_' + str(rs) + '_normalize.joblib' 
+            scaler_path = LOGS + 'standardscaler/' + str(semeval2010) + '_' + lemma + '_' + \
+                str(dim_reduct) + '_' + str(rs) + '_normalize.joblib' 
+            scaler = StandardScaler()
+            data = scaler.fit_transform(data) 
+            dump(scaler, scaler_path)
+        else:  
+            outpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
+                str(dim_reduct) + '_' + str(rs) + '.joblib'
+        pca = PCA(n_components=dim_reduct, random_state=rs)
+        data = pca.fit_transform(data)
+        dump(pca, outpath)
+    amount_initial_centers = 2
+    initial_centers = kmeans_plusplus_initializer(sample, amount_initial_centers).initialize()
+    xmeans_instance = xmeans(data, initial_centers, 20)
+    xmeans_instance.process()
+    encoding = xmeans_instance.get_cluster_encoding()
+    clusters = xmeans_instance.get_clusters()
+    encoder = cluster_encoder(encoding, clusters, data)
+    encoder.set_encoding(type_encoding.CLUSTER_INDEX_LABELING);
+    clusters = encoder.get_clusters()
+    centroids = xmeans_instance.get_centers()
+    return (IDs, (clusters, centroids))
 
 def kmeans_with_crit(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False): 
     lemma = tup[0]
