@@ -432,7 +432,7 @@ def main():
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
     #for dr in [2, 20, 100]:  
-    #    semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=1)
+    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
     #    semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=1)
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_1')
