@@ -64,8 +64,7 @@ MODEL_CLASSES = {
     'camembert': (CamembertConfig, CamembertForMaskedLM, CamembertTokenizer)
 }
 
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print('')
 print("********************************************")
@@ -196,7 +195,7 @@ def mask_tokens(inputs, tokenizer, args):
     return inputs, labels
 
 
-def train(args, model, tokenizer):
+def train(args, train_dataset, model, tokenizer):
     """ Train the model """
     if args.local_rank in [-1, 0]:
         tb_writer = SummaryWriter()
@@ -532,12 +531,11 @@ def main():
     if args.do_train:
         if args.local_rank not in [-1, 0]:
             torch.distributed.barrier()  # Barrier to make sure only the first process in distributed training process the dataset, and the others will use the cache
-        # NOTE: In my modification, I expect the training examples to be cached already; this is just easier for debugging
-
+        train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False)
         if args.local_rank == 0:
             torch.distributed.barrier()
 
-        global_step, tr_loss = train(args, model, tokenizer)
+        global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
 
