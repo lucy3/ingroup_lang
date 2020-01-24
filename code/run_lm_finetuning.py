@@ -101,11 +101,14 @@ class TextDataset(Dataset):
             with open(file_path, encoding="utf-8") as f:
                 for line in f: 
                     text = line.strip()
-                    text_ids = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(text)[:block_size])
-                    text_ids = tokenizer.build_inputs_with_special_tokens(text_ids)
-                    for k in range(len(text_ids), block_size + 2): 
-                        text_ids.append(pad_token)
-                    self.examples.append(text_ids)
+                    tokens = tokenizer.tokenize(text)
+                    for i in range(0, len(tokens), block_size):
+                        block = tokens[i:i+block_size]
+                        text_ids = tokenizer.convert_tokens_to_ids(block)
+                        text_ids = tokenizer.build_inputs_with_special_tokens(text_ids)
+                        for k in range(len(text_ids), block_size + 2): 
+                            text_ids.append(pad_token)
+                        self.examples.append(text_ids)
                     if len(self.examples) % 1000000 == 0: 
                         logger.info("Appended " + str(len(self.examples)) + " examples.")
 

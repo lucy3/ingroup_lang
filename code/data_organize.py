@@ -359,9 +359,11 @@ def prep_finetuning():
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
         rdds.append(data)
     all_data = sc.union(rdds)
-    test, train = all_data.randomSplit(weights=[0.1, 0.9], seed=1) 
-    test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test')
-    train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train')
+    test, train = all_data.randomSplit(weights=[0.1, 0.9], seed=1)
+    test = test.takeSample(false, 1000000, 0)
+    train = train.takeSample(false, 10000000, 0)
+    test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test2')
+    train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train2')
 
 def temp(): 
     for i in range(100): 
@@ -400,10 +402,10 @@ def main():
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    #prep_finetuning()
+    prep_finetuning()
     #filter_ukwac()
     #temp()
-    prep_finetuning2(num_epochs=3)
+    #prep_finetuning2(num_epochs=3)
     #sc.stop()
 
 if __name__ == '__main__':
