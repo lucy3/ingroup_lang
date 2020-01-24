@@ -11,10 +11,10 @@ import math
 
 #ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 ROOT = '/data0/lucy/ingroup_lang/'
-WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
+WORD_COUNT_DIR = ROOT + 'logs/word_counts/' 
 PMI_DIR = ROOT + 'logs/pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
-SR_DATA_DIR = ROOT + 'subreddits3/'
+SR_DATA_DIR = ROOT + 'subreddits3/' 
 LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
@@ -28,13 +28,16 @@ def count_words():
     Get word counts in each subreddit
     """
     log_file = open(LOG_DIR + 'counting_log.temp', 'w')
+    log_file.write("Counting words in " + SR_DATA_DIR + " with output " \
+        + WORD_COUNT_DIR + "\n")  
     for filename in os.listdir(SR_DATA_DIR):  
         log_file.write(filename + '\n') 
         path = SR_DATA_DIR + filename + '/RC_sample.conll'
         log_file.write('\tReading in textfile\n')
         data = sc.textFile(path)
-        data = data.filter(lambda line: line.strip() != '')
-        data = data.map(lambda line: (line.strip(), 1))
+        data = data.filter(lambda line: line.strip() != '' and \
+             not line.startswith('USER1USER0USER'))
+        data = data.map(lambda line: (line.strip().lower(), 1))
         log_file.write('\tReducing by key...\n') 
         data = data.reduceByKey(lambda a, b: a + b)
         df = sqlContext.createDataFrame(data, ['word', 'count'])
@@ -185,10 +188,10 @@ def word_tfidf(percent_param=0.2):
 
 def main(): 
     count_words()
-    count_overall_words()
-    calculate_pmi()
-    count_document_freq()
-    word_tfidf()
+    #count_overall_words()
+    #calculate_pmi()
+    #count_document_freq()
+    #word_tfidf()
     sc.stop()
 
 if __name__ == '__main__':
