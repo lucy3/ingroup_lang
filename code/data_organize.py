@@ -12,7 +12,7 @@ import time
 import re
 import string
 import os
-#from pyspark import SparkConf, SparkContext
+from pyspark import SparkConf, SparkContext
 from collections import Counter
 import random
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -22,9 +22,9 @@ from nltk.stem import WordNetLemmatizer
 
 wnl = WordNetLemmatizer()
 
-#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
 #ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ROOT = '/mnt/data0/lucy/ingroup_lang/'
+#ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -33,8 +33,8 @@ SR_FOLDER2 = ROOT + 'subreddits2/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
 
-#conf = SparkConf()
-#sc = SparkContext(conf=conf)
+conf = SparkConf()
+sc = SparkContext(conf=conf)
 reddits = set()
 
 def clean_up_text(text): 
@@ -359,9 +359,11 @@ def prep_finetuning():
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
         rdds.append(data)
     all_data = sc.union(rdds)
-    test, train = all_data.randomSplit(weights=[0.1, 0.9], seed=1) 
-    test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test')
-    train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train')
+    test, train = all_data.randomSplit(weights=[0.1, 0.9], seed=1)
+    test = sc.parallelize(test.takeSample(False, 1000000, 0))
+    train = sc.parallelize(train.takeSample(False, 10000000, 0))
+    test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test2')
+    train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train2')
 
 def temp(): 
     for i in range(100): 
@@ -400,11 +402,11 @@ def main():
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    #prep_finetuning()
+    prep_finetuning()
     #filter_ukwac()
     #temp()
-    prep_finetuning2(num_epochs=3)
-    #sc.stop()
+    #prep_finetuning2(num_epochs=3)
+    sc.stop()
 
 if __name__ == '__main__':
     main()

@@ -3,27 +3,28 @@ File for getting vocab of words we want to get senses for
 """
 
 import os
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 from collections import Counter, defaultdict
 import operator
 import re, string
 import csv
 import math
+from nltk.tokenize import word_tokenize
 
 ROOT = '/data0/lucy/ingroup_lang/'
-WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
-PMI_DIR = ROOT + 'logs/pmi/'
-TFIDF_DIR = ROOT + 'logs/tfidf/'
-SR_DATA_DIR = ROOT + 'subreddits3/'
+WORD_COUNT_DIR = ROOT + 'logs/word_counts_dup/'
 LOG_DIR = ROOT + 'logs/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
-def get_vocab(percent_param, N): 
+def get_vocab(percent_param, N):
+    '''
+    This function is python 2.7 unfortunately
+    '''
     vocab_map = defaultdict(list) # word : [subreddit]
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename:  
@@ -52,12 +53,43 @@ def get_vocab(percent_param, N):
         for w in vocab: 
             outfile.write(w.encode('utf-8', 'replace') + ',' + str(all_counts[w]) + \
                          ',' + str(vocab_subreddits[w]) + '\n')
-
+            
+def comments_with_vocab(vocab_file): 
+    vocab = set()
+    with open(vocab_file, 'r') as infile: 
+        for line in infile: 
+            contents = line.strip().split(',')
+            vocab.add(contents[0])
+    d = Counter()
+    for folder in os.listdir(ROOT + 'subreddits_month/'): 
+        if not os.path.isdir(ROOT + 'subreddits_month/' + folder): continue
+        data = sc.textFile(ROOT + 'subreddits_month/' + folder + '/RC_sample')
+        data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
+        data = data.map(lambda line: set(word_tokenize(line.lower())))
+        data = data.map(lambda s: (len(vocab & s), 1))
+        data = data.filter(lambda tup: tup[0] != 0)
+        data = data.reduceByKey(lambda n1, n2: n1 + n2)
+        d += Counter(data.collectAsMap())
+    print("NUMBER OF COMMENTS WITH VOCAB WORDS:", sum(d.values()))
+    
+def get_vocab_overlap(vocab1_path, vocab2_path):
+    vocab1 = set()
+    vocab2 = set()
+    with open(vocab1_path, 'r') as infile: 
+        for line in infile: 
+            contents = line.strip().split(',')
+            vocab1.add(contents[0])
+    with open(vocab2_path, 'r') as infile: 
+        for line in infile: 
+            contents = line.strip().split(',')
+            vocab2.add(contents[0])
+    print("OVERLAP between", vocab1_path, vocab2_path, "is:", len(vocab1 & vocab2))
+        
 def main(): 
-    get_vocab(0.2, 20)
-    get_vocab(0.2, 50)
-    get_vocab(0.2, 100)
-    get_vocab(0.1, 20)
+    #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
+    #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
+    comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
+    #get_vocab(0.03, 1)
     sc.stop()
 
 if __name__ == "__main__":
