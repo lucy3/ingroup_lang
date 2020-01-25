@@ -21,6 +21,7 @@ from joblib import dump, load
 from nltk.stem import WordNetLemmatizer
 from sklearn.preprocessing import StandardScaler
 from pyclustering.cluster.xmeans import xmeans
+from pyclustering.cluster.encoder import type_encoding, cluster_encoder
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 
 wnl = WordNetLemmatizer()
@@ -72,7 +73,7 @@ def xmeans_helper(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False
         data = pca.fit_transform(data)
         dump(pca, outpath)
     amount_initial_centers = 2
-    initial_centers = kmeans_plusplus_initializer(sample, amount_initial_centers).initialize()
+    initial_centers = kmeans_plusplus_initializer(data, amount_initial_centers).initialize()
     xmeans_instance = xmeans(data, initial_centers, 20)
     xmeans_instance.process()
     encoding = xmeans_instance.get_cluster_encoding()
@@ -317,7 +318,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     conf = SparkConf()
     sc = SparkContext(conf=conf)
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_centroids/'
+        outname = 'semeval2010_xmeans/semeval2010_centroids/' # TODO
         data = sc.textFile(SEMEVAL2010_TRAIN_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_centroids/'
@@ -329,8 +330,8 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    data = data.map(partial(kmeans_with_crit, dim_reduct=dim_reduct, 
-         semeval2010=semeval2010, rs=rs, normalize=normalize))
+    data = data.map(partial(xmeans_helper, dim_reduct=dim_reduct, 
+         semeval2010=semeval2010, rs=rs, normalize=normalize)) # TODO
     clustered_IDs = data.collect()
     sc.stop() 
     for tup in clustered_IDs: 
@@ -364,7 +365,7 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0, norma
             pca = load(inpath)
             data = pca.transform(data)
     if semeval2010: 
-        inname = LOGS + 'semeval2010/semeval2010_centroids/'
+        inname = LOGS + 'semeval2010_xmeans/semeval2010_centroids/' # TODO
     else: 
         inname = LOGS + 'semeval2013/semeval2013_centroids/'
     if normalize: 
@@ -385,7 +386,7 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0, normalize=Fal
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) 
+        outname = 'semeval2010_xmeans/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) # TODO
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
@@ -462,7 +463,7 @@ def main():
     #semeval_clusters(test=True, dim_reduct=20)
     #for dr in [2, 20, 100]:  
     semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
-    #    semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=1)
+    #semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_1')
 
