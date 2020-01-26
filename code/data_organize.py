@@ -22,8 +22,8 @@ from nltk.stem import WordNetLemmatizer
 
 wnl = WordNetLemmatizer()
 
-ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 #ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
@@ -397,15 +397,66 @@ def prep_finetuning2(num_epochs=3):
             with open(new_filename + '_chunk' + str(j), 'w') as outfile: 
                 outfile.writelines(chunk)
             j += 1
+
+def get_vocab_word_instances(line, vocab=None):
+    # flatmap each comment to (vocab word, [comment])
+    line = line.strip()
+    tokens = set(word_tokenize(line.lower()))
+    ret = []
+    union = tokens & vocab
+    for w in union: 
+        ret.append((w, [line]))
+    if len(union) == 0: 
+        ret.append((None, [line]))
+    return ret 
+
+def sample_vocab_lines(tup): 
+    w = tup[0]
+    lines = tup[1]
+    instances = random.sample(lines, 500)
+    return (w, instances)
+
+def save_vocab_instances_doc(tup): 
+    w = tup[0]
+    lines = tup[1]
+    with open(LOGS + 'vocabs/docs/' + w, 'w') as outfile:
+        for l in lines: 
+            outfile.write(l + '\n')
+
+def sample_word_instances(): 
+    '''
+    Since we only want to cluster 500 instances, 
+    we sample 500 instances. 
+    '''
+    vocab_file = '../logs/vocab/tiny_vocab'
+    vocab = set()
+    with open(vocab_file, 'r') as infile: 
+        for line in infile: 
+            w = line.strip().split(',')[0]
+            vocab.add(w)
+    rdds = []
+    for folder in os.listdir(SR_FOLDER_MONTH): 
+        path = SR_FOLDER_MONTH + folder + '/RC_sample'
+        data = sc.textFile(path) 
+        data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
+        data = data.flatMap(partial(get_vocab_word_instances, vocab=vocab))
+        data = data.filter(lambda tup: tup[0] is not None)
+        data = data.reduceByKey(lambda n1, n2: n1 + n2) 
+        rdds.append(data)
+    all_tups = sc.union(rdds)
+    all_tups = all_tups.reduceByKey(lambda n1, n2: n1 + n2)
+    all_tups = all_tups.map(sample_vocab_lines)
+    all_tups = all_tups.foreach(save_vocab_instances_doc)
     
 def main(): 
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    prep_finetuning()
+    #prep_finetuning()
     #filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
+    sample_word_instances()
     sc.stop()
 
 if __name__ == '__main__':

@@ -318,7 +318,7 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     conf = SparkConf()
     sc = SparkContext(conf=conf)
     if semeval2010: 
-        outname = 'semeval2010_xmeans/semeval2010_centroids/' # TODO
+        outname = 'semeval2010/semeval2010_centroids/' 
         data = sc.textFile(SEMEVAL2010_TRAIN_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_centroids/'
@@ -330,8 +330,8 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, normalize
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    data = data.map(partial(xmeans_helper, dim_reduct=dim_reduct, 
-         semeval2010=semeval2010, rs=rs, normalize=normalize)) # TODO
+    data = data.map(partial(kmeans_with_crit, dim_reduct=dim_reduct, 
+         semeval2010=semeval2010, rs=rs, normalize=normalize)) 
     clustered_IDs = data.collect()
     sc.stop() 
     for tup in clustered_IDs: 
@@ -365,7 +365,7 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0, norma
             pca = load(inpath)
             data = pca.transform(data)
     if semeval2010: 
-        inname = LOGS + 'semeval2010_xmeans/semeval2010_centroids/' # TODO
+        inname = LOGS + 'semeval2010/semeval2010_centroids/' 
     else: 
         inname = LOGS + 'semeval2013/semeval2013_centroids/'
     if normalize: 
@@ -386,7 +386,7 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0, normalize=Fal
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010_xmeans/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) # TODO
+        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) 
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
         outname = 'semeval2013/semeval2013_clusters' + str(dim_reduct) + '_' + str(rs)
@@ -461,9 +461,10 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    #for dr in [2, 20, 100]:  
-    semeval_cluster_training(semeval2010=True, dim_reduct=100, rs=1)
-    #semeval_cluster_test(semeval2010=True, dim_reduct=100, rs=1)
+    for dr in [2, 10, 20, 50, 100, 150, 200]:  
+        for r in range(10): 
+            semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=r)
+            semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=r)
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_1')
 
