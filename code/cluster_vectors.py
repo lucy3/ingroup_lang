@@ -3,7 +3,6 @@ import numpy as np
 import math
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import normalized_mutual_info_score, adjusted_mutual_info_score
-import numpy as np
 import bcubed
 from collections import defaultdict, Counter
 import json

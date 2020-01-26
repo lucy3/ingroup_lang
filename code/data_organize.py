@@ -428,7 +428,7 @@ def sample_word_instances():
     Since we only want to cluster 500 instances, 
     we sample 500 instances. 
     '''
-    vocab_file = '../logs/vocab/tiny_vocab'
+    vocab_file = '../logs/vocabs/tiny_vocab'
     vocab = set()
     with open(vocab_file, 'r') as infile: 
         for line in infile: 
