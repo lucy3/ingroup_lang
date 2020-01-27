@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=ukwac
+#SBATCH --job-name=data_organize
 #SBATCH --partition=savio2
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1

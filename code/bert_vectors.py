@@ -144,7 +144,7 @@ class BertEmbeddings():
         with open(inputfile, 'r') as infile: 
             for line in infile: 
                 contents = line.strip()
-                if contents.startswith('@@#USER#@@_'): 
+                if contents.startswith('USER1USER0USER'): 
                     curr_user = contents
                 else:
                     sent_tok = sent_tokenize(contents)
