@@ -171,17 +171,32 @@ class EmbeddingClusterer():
         contain the vocab word of interest 
         - filters vectors so we only have vectors for the word of interest
         '''
+        print("Grouping wordpiece vectors: " + str(do_wordpiece))
         data = []
-        for tup in embeddings: 
+        prev_w = (None, None)
+        ongoing_word = []
+        ongoing_rep = []
+        for i, tup in enumerate(embeddings): 
             if not do_wordpiece: 
                 if tup[0] == word: 
                     data.append(tup[1])
             else: 
-                # put together wordpiece word, gather vectors
-                # if wordpiece word == word, average vectors ane append
+                if tup[0].startswith('##'): 
+                    if not prev_w[0].startswith('##'): 
+                        ongoing_word.append(prev_w[0][2:])
+                        ongoing_rep.append(prev_w[1])
+                    ongoing_word.append(tup[0][2:])
+                    ongoing_rep.append(tup[1])
+                else: 
+                    if ''.join(ongoing_word) == word: 
+                        data.append(np.mean(ongoing_rep, axis=0).flatten())
+                    ongoing_word = []
+                    ongoing_rep = []
+            prev_w = tup
         return np.array(data)
 
     def cluster_embeddings(self, data, word, dim_reduct=None, rs=0): 
+        print("Starting clustering...")
         assert data.shape[0] >= 500, "Data isn't of size 500 but instead " + str(data.shape[0])
         if dim_reduct is not None:
             outpath = LOGS + 'reddit_pca/' + word + '_' + \
@@ -221,8 +236,12 @@ def main():
     time3 = time.time()
     print("TOTAL TIME:", time3 - time2)
     data = model.group_wordpiece(embeddings, word, do_wordpiece)
+    time4 = time.time()
+    print("TOTAL TIME:", time4 - time3)
     centroids = model.cluster_embeddings(data, word, dim_reduct=100)
     np.save(LOGS + 'reddit_centroids/' + word + '.npy', centroids)
+    time5 = time.time()
+    print("TOTAL TIME:", time5 - time4) 
 
 
 if __name__ == "__main__":
