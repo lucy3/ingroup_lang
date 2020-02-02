@@ -25,7 +25,6 @@ import json
 import xml.etree.ElementTree as ET
 import re
 import string
-import spacy
 from functools import partial
 from sklearn.decomposition import PCA
 import random
@@ -81,7 +80,7 @@ class EmbeddingClusterer():
             marked_text = sentence[1] 
             tokenized_text = self.tokenizer.tokenize(marked_text)
             for i in range(0, len(tokenized_text), 510):
-                tokenized_text = tokenized_text[i:i+block_size]
+                tokenized_text = tokenized_text[i:i+510]
                 indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_text)
                 indexed_tokens = self.tokenizer.build_inputs_with_special_tokens(indexed_tokens)
                 all_data.append(indexed_tokens)
@@ -136,7 +135,6 @@ class EmbeddingClusterer():
         do_wordpiece = True
         print("Getting embeddings for batched_data of length", len(batched_data))
         for b in range(len(batched_data)):
-            print("Batch #", b)
             # each item in these lists/tensors is a sentence
             tokens_tensor = batched_data[b].to(device)
             atten_tensor = batched_masks[b].to(device)
@@ -144,7 +142,6 @@ class EmbeddingClusterer():
             users = batched_users[b]
             with torch.no_grad():
                 _, _, encoded_layers = self.model(tokens_tensor, attention_mask=atten_tensor, token_type_ids=None)
-            print("batch size, sequence length, hidden layer size:", encoded_layers[0].size())
             for sent_i in range(len(words)): 
                 for token_i in range(len(words[sent_i])):
                     if batched_masks[b][sent_i][token_i] == 0: continue
@@ -176,23 +173,25 @@ class EmbeddingClusterer():
         prev_w = (None, None)
         ongoing_word = []
         ongoing_rep = []
-        for i, tup in enumerate(embeddings): 
+        for i, tup in enumerate(embeddings):
             if not do_wordpiece: 
                 if tup[0] == word: 
                     data.append(tup[1])
             else: 
                 if tup[0].startswith('##'): 
                     if not prev_w[0].startswith('##'): 
-                        ongoing_word.append(prev_w[0][2:])
+                        ongoing_word.append(prev_w[0])
                         ongoing_rep.append(prev_w[1])
                     ongoing_word.append(tup[0][2:])
                     ongoing_rep.append(tup[1])
-                else: 
+                else:
                     if ''.join(ongoing_word) == word: 
                         data.append(np.mean(ongoing_rep, axis=0).flatten())
                     ongoing_word = []
                     ongoing_rep = []
             prev_w = tup
+        if ''.join(ongoing_word) == word: 
+            data.append(np.mean(ongoing_rep, axis=0).flatten())
         return np.array(data)
 
     def cluster_embeddings(self, data, word, dim_reduct=None, rs=0): 
@@ -227,9 +226,9 @@ def main():
     start = time.time()
     model = EmbeddingClusterer()
     instances = model.read_instances(doc)
-    time.time()
+    time1 = time.time()
     print("TOTAL TIME:", time1 - start)
-    batched_data, batched_words, batched_masks, batched_users = model.get_batches(sentences, batch_size)
+    batched_data, batched_words, batched_masks, batched_users = model.get_batches(instances, batch_size)
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
     embeddings, do_wordpiece = model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, word)

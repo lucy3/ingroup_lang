@@ -2,7 +2,7 @@
 
 module load java
 
-dims=(2 10 20 50 100 150 200)
+dims=(2 10 20 50 100 150)
 for j in "${dims[@]}"
 do
     rm fscores.temp
