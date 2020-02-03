@@ -32,6 +32,22 @@ import os.path
 from joblib import dump, load
 from sklearn.preprocessing import StandardScaler
 
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+LOGS = ROOT + 'logs/'
+
+batch_size=32
+dropout_rate=0.25
+bert_dim=768
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+print('')
+print("********************************************")
+print("Running on: {}".format(device))
+print("********************************************")
+print('')
+
 class EmbeddingMatcher():
     def __init__(self):
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
@@ -121,7 +137,6 @@ class EmbeddingMatcher():
     
     def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, vocab): 
         ret = [] 
-        do_wordpiece = True
         print("Getting embeddings for batched_data of length", len(batched_data))
         for b in range(len(batched_data)):
             # each item in these lists/tensors is a sentence
@@ -147,7 +162,7 @@ class EmbeddingMatcher():
                     rep = torch.cat((hidden_layers[0], hidden_layers[1], 
                                 hidden_layers[2], hidden_layers[3]), 0) 
                     ret.append((w, users[sent_i], rep.cpu().numpy().reshape(1, -1)[0]))
-        return (ret, do_wordpiece)
+        return ret
 
     def group_wordpiece(self, embeddings, vocab): 
         '''
@@ -195,23 +210,50 @@ class EmbeddingMatcher():
                 data[tok].append((prev_w[1], rep)) 
         return data
 
-    def match_embeddings(self, data, word, dim_reduct=None, rs=0): 
+    def match_embeddings(self, data, vocab, dim_reduct=None, rs=0): 
     '''
     for each word and its reps, load centroid and match 
-    output: line#\tuser\tword\tcentroid#\n in a subreddit-specific file
+    output: line#_user\tword\tcentroid#\n in a subreddit-specific file
     '''
     # open output file
     for token in data: 
+        assert token in vocab, "This token " + token + " is not in the vocab!!!!"
         # load centroids 
-        reps = 
+        rep_list = data[token]
+        IDs = []
+        reps = []
+        for tup in rep_list: 
+            # append to IDs and reps list
+        # load pca, transform 
+        assert reps.shape[1] == centroids.shape[1] 
+        sims = cosine_similarity(data, centroids) # IDs x n_centroids
+        labels = np.argmax(sims, axis=1)
+        for i in range(len(IDs)): 
+            outfile.write(IDs[i] + '\t' + token + '\t' + str(labels[i]) + '\n') 
     # close output file  
 
 def main(): 
     subreddit = sys.argv[1]
+    inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
     vocab = # TODO get vocab from subreddit vocab file
     fake_vocab = set(['dinosaurs', 'fit', 'insecurity'])  
     vocab = set(vocab) & set(fake_vocab) 
     model = EmbeddingMatcher()
+    sentences = model.read_sentences(inputfile) 
+    time1 = time.time()
+    print("TOTAL TIME:", time1 - start)
+    batched_data, batched_words, batched_masks, batched_users = model.get_batches(instances, batch_size)
+    time2 = time.time()
+    print("TOTAL TIME:", time2 - time1)
+    embeddings = model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, vocab)
+    time3 = time.time()
+    print("TOTAL TIME:", time3 - time2)
+    data = model.group_wordpiece(embeddings, vocab)
+    time4 = time.time()
+    print("TOTAL TIME:", time4 - time3)
+    model.match_embeddings(data, vocab, dim_reduct=100, rs=0)
+    time5 = time.time()
+    print("TOTAL TIME:", time5 - time4) 
     
 
 if __name__ == "__main__":
