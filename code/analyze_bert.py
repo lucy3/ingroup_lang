@@ -12,7 +12,7 @@ import random
 from collections import defaultdict
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-VEC_FOLDER = ROOT + 'logs/bert_vectors/'
+ALL_VEC_FOLDER = ROOT + 'logs/entire_sr_vectors/'
 LOGS = ROOT + 'logs/'
 
 conf = SparkConf()
@@ -79,6 +79,30 @@ def sanity_check():
     plt.savefig('../logs/bert_sanity_check_' + subreddit + '.png')
 
 def compare_word_across_subreddits(subreddit_list, word): 
+    '''
+    This implementation assumes that we saved individual files
+    for each word and each subreddit (since we don't want to
+    waste time saving every vector, only ones we care about
+    for some visualization)
+    '''
+    srs = []
+    senses = []
+    
+    for sr in subreddit_list: 
+        sense_path = LOGS + 'senses/' + sr
+        with open(sense_path, 'r') as infile: 
+            for line in infile: 
+                contents = line.strip().split('\t') 
+                w = contents[1]
+                if word != w: continue
+                sense = contents[2]
+                rep = np.array([float(i) for i in contents[3].split()])
+
+def compare_word_across_subreddits_old(subreddit_list, word): 
+    '''
+    This implementation assumes that each subreddit has all of
+    its vectors saved and we must filter them.
+    '''
     X = []
     colors = []
     color_map = {}
@@ -89,7 +113,7 @@ def compare_word_across_subreddits(subreddit_list, word):
         color = color_options[i]
         color_map[sr] = color
         color_map_rev[color] = sr 
-        data = sc.textFile(VEC_FOLDER + sr)
+        data = sc.textFile(ALL_VEC_FOLDER + sr)
         data = data.filter(lambda x: get_word_subset(x, word))
         total = data.count()
         if total > 500: 

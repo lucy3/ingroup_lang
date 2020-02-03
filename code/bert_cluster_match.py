@@ -74,7 +74,7 @@ class EmbeddingMatcher():
                 line_number += 1
         return sentences
 
-   def get_batches(self, sentences, max_batch): 
+    def get_batches(self, sentences, max_batch): 
         print("Getting batches...")
         # each item in these lists is a sentence
         all_data = [] # indexed tokens, or word IDs
@@ -170,7 +170,7 @@ class EmbeddingMatcher():
         - filters vectors so we only have vectors for the word of interest
         - groups together representations of the same word
         '''
-        print("Grouping wordpiece vectors: " + str(do_wordpiece))
+        print("Grouping wordpiece vectors...")
         data = defaultdict(list) # { word : [(user, rep)] } 
         prev_w = (None, None, None)
         ongoing_word = []
@@ -191,16 +191,16 @@ class EmbeddingMatcher():
                 ongoing_word = []
                 ongoing_rep = []
             else: 
-                if len(ongoing_word) == 0 and prev_line is not None: 
+                if len(ongoing_word) == 0 and prev_w[0] is not None: 
                     ongoing_word.append(prev_w[0])
-                    ongoing_word_rep.append(prev_w[2])
+                    ongoing_rep.append(prev_w[2])
                 ongoing_word.append(tup[0])
-                ongoing_word_rep.append(tup[2])
+                ongoing_rep.append(tup[2])
             prev_w = tup
         if len(ongoing_word) == 0 and prev_w[0] is not None: 
             data[prev_w[0]].append((prev_w[1], prev_w[2]))
         elif prev_w[0] is not None:
-            rep = np.array(ongoing_word_rep)
+            rep = np.array(ongoing_rep)
             rep = np.mean(rep, axis=0).flatten()
             tok = ''
             for t in ongoing_word: 
@@ -210,39 +210,52 @@ class EmbeddingMatcher():
                 data[tok].append((prev_w[1], rep)) 
         return data
 
-    def match_embeddings(self, data, vocab, dim_reduct=None, rs=0): 
-    '''
-    for each word and its reps, load centroid and match 
-    output: line#_user\tword\tcentroid#\n in a subreddit-specific file
-    '''
-    # open output file
-    for token in data: 
-        assert token in vocab, "This token " + token + " is not in the vocab!!!!"
-        # load centroids 
-        rep_list = data[token]
-        IDs = []
-        reps = []
-        for tup in rep_list: 
-            # append to IDs and reps list
-        # load pca, transform 
-        assert reps.shape[1] == centroids.shape[1] 
-        sims = cosine_similarity(data, centroids) # IDs x n_centroids
-        labels = np.argmax(sims, axis=1)
-        for i in range(len(IDs)): 
-            outfile.write(IDs[i] + '\t' + token + '\t' + str(labels[i]) + '\n') 
-    # close output file  
+    def match_embeddings(self, data, vocab, subreddit, viz=False, dim_reduct=100, rs=0): 
+        '''
+        for each word and its reps, load centroid and match 
+        output: line#_user\tword\tcentroid#\n in a subreddit-specific file
+        '''
+        outfile = open(LOGS + 'senses/' + subreddit, 'w') 
+        for token in data:
+            # TODO: for visualization, save vectors that equate a specific token 
+            assert token in vocab, "This token " + token + " is not in the vocab!!!!"
+            centroids = np.load(LOGS + 'reddit_centroids/' + token + '.npy') 
+            rep_list = data[token]
+            IDs = []
+            reps = []
+            for tup in rep_list: 
+                IDs.append(tup[0])
+                reps.append(tup[1])
+            reps = np.array(reps)
+            inpath = LOGS + 'reddit_pca/' + token + \
+             '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
+            pca = load(inpath)
+            reps = pca.transform(reps)
+            assert reps.shape[1] == centroids.shape[1] 
+            sims = cosine_similarity(reps, centroids) # IDs x n_centroids
+            labels = np.argmax(sims, axis=1)
+            for i in range(len(IDs)): 
+                if viz:
+                    outfile.write(IDs[i] + '\t' + token + '\t' + str(labels[i]) + '\t' + \
+                       ' '.join(str(n) for n in reps[i]) + '\n')  
+                else: 
+                    outfile.write(IDs[i] + '\t' + token + '\t' + str(labels[i]) + '\n') 
+        outfile.close()
 
 def main(): 
     subreddit = sys.argv[1]
     inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
-    vocab = # TODO get vocab from subreddit vocab file
-    fake_vocab = set(['dinosaurs', 'fit', 'insecurity'])  
-    vocab = set(vocab) & set(fake_vocab) 
+    vocab = set()
+    with open(LOGS + 'vocabs/tiny_vocab', 'r') as infile: 
+        for line in infile: 
+            vocab.add(line.strip())
+    vocab = set(['fit'])  # TODO: uncomment this line for visualization
+    start = time.time()
     model = EmbeddingMatcher()
     sentences = model.read_sentences(inputfile) 
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
-    batched_data, batched_words, batched_masks, batched_users = model.get_batches(instances, batch_size)
+    batched_data, batched_words, batched_masks, batched_users = model.get_batches(sentences, batch_size)
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
     embeddings = model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, vocab)
@@ -251,7 +264,7 @@ def main():
     data = model.group_wordpiece(embeddings, vocab)
     time4 = time.time()
     print("TOTAL TIME:", time4 - time3)
-    model.match_embeddings(data, vocab, dim_reduct=100, rs=0)
+    model.match_embeddings(data, vocab, subreddit, viz=True, dim_reduct=100, rs=0)
     time5 = time.time()
     print("TOTAL TIME:", time5 - time4) 
     
