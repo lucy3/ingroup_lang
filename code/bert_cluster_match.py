@@ -1,11 +1,11 @@
-"""
-File for use with parallel where each word's 500
-instances are passed through BERT and clustered
+# for a subreddit
+# run forward pass of BERT on all sentences containing top 3% vocab (keeping user info)
+# get word vectors for every word in vocab and wordpiece
+# put together wordpiece, only keep vocab words
+# group together reps of the same words
+# for each word and its reps, load centroid and match 
+# output word_centroid# as sense for each user_line# into a subreddit-specific file
 
-Functions are copied from
-bert_vectors.py
-cluster_vectors.py
-"""
 import os,sys,argparse
 from transformers import BertTokenizer, BertModel
 import torch
@@ -48,24 +48,29 @@ print("Running on: {}".format(device))
 print("********************************************")
 print('')
 
-class EmbeddingClusterer():
+class EmbeddingMatcher():
     def __init__(self):
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.model.eval()
         self.model.to(device)
 
-    def read_instances(self, inputfile): 
+    def read_sentences(self, inputfile): 
         print("Reading sentences...")
         sentences = []
         i = 0
+        curr_user = None
         line_number = 0
         with open(inputfile, 'r') as infile: 
             for line in infile: 
                 contents = line.strip()
-                sent_tok = sent_tokenize(contents)
-                for sent in sent_tok: 
-                    sentences.append((str(line_number), sent))
+                if contents.startswith('USER1USER0USER'): 
+                    curr_user = contents
+                else:
+                    sent_tok = sent_tokenize(contents)
+                    for sent in sent_tok: 
+                        sentences.append((str(line_number) + '_' + curr_user, sent))
+                        i += 1
                 line_number += 1
         return sentences
 
@@ -129,10 +134,9 @@ class EmbeddingClusterer():
             if max_len > 200: 
                 current_batch = 6
         return batched_data, batched_words, batched_masks, batched_users
-
-    def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, word): 
+    
+    def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, vocab): 
         ret = [] 
-        do_wordpiece = True
         print("Getting embeddings for batched_data of length", len(batched_data))
         for b in range(len(batched_data)):
             # each item in these lists/tensors is a sentence
@@ -149,8 +153,7 @@ class EmbeddingClusterer():
                     next_w = ''
                     if (token_i + 1) < len(words[sent_i]): 
                         next_w = words[sent_i][token_i+1]
-                    if w != word and '##' not in w and '##' not in next_w: continue
-                    if w == word: do_wordpiece = False
+                    if w not in vocab and '##' not in w and '##' not in next_w: continue
                     hidden_layers = [] 
                     for layer_i in range(1, 5):
                         vec = encoded_layers[-layer_i][sent_i][token_i]
@@ -158,90 +161,113 @@ class EmbeddingClusterer():
                     # concatenate last four layers
                     rep = torch.cat((hidden_layers[0], hidden_layers[1], 
                                 hidden_layers[2], hidden_layers[3]), 0) 
-                    ret.append((w, rep.cpu().numpy().reshape(1, -1)[0]))
-        return (ret, do_wordpiece)
+                    ret.append((w, users[sent_i], rep.cpu().numpy().reshape(1, -1)[0]))
+        return ret
 
-    def group_wordpiece(self, embeddings, word, do_wordpiece): 
+    def group_wordpiece(self, embeddings, vocab): 
         '''
         - puts together wordpiece vectors
-        - only piece them together if embeddings does not 
-        contain the vocab word of interest 
         - filters vectors so we only have vectors for the word of interest
+        - groups together representations of the same word
         '''
-        print("Grouping wordpiece vectors: " + str(do_wordpiece))
-        data = []
-        prev_w = (None, None)
+        print("Grouping wordpiece vectors...")
+        data = defaultdict(list) # { word : [(user, rep)] } 
+        prev_w = (None, None, None)
         ongoing_word = []
         ongoing_rep = []
         for i, tup in enumerate(embeddings):
-            if not do_wordpiece: 
-                if tup[0] == word: 
-                    data.append(tup[1])
+            if not tup[0].startswith('##'):    
+                if len(ongoing_word) == 0 and prev_w[0] is not None:
+                    data[prev_w[0]].append((prev_w[1], prev_w[2]))
+                elif prev_w[0] is not None:          
+                    rep = np.array(ongoing_rep)
+                    rep = np.mean(rep, axis=0).flatten()
+                    tok = ''
+                    for t in ongoing_word: 
+                        if t.startswith('##'): t = t[2:]
+                        tok += t
+                    if tok in vocab: 
+                        data[tok].append((prev_w[1], rep))
+                ongoing_word = []
+                ongoing_rep = []
             else: 
-                if tup[0].startswith('##'): 
-                    if not prev_w[0].startswith('##'): 
-                        ongoing_word.append(prev_w[0])
-                        ongoing_rep.append(prev_w[1])
-                    ongoing_word.append(tup[0][2:])
-                    ongoing_rep.append(tup[1])
-                else:
-                    if ''.join(ongoing_word) == word: 
-                        data.append(np.mean(ongoing_rep, axis=0).flatten())
-                    ongoing_word = []
-                    ongoing_rep = []
+                if len(ongoing_word) == 0 and prev_w[0] is not None: 
+                    ongoing_word.append(prev_w[0])
+                    ongoing_rep.append(prev_w[2])
+                ongoing_word.append(tup[0])
+                ongoing_rep.append(tup[2])
             prev_w = tup
-        if ''.join(ongoing_word) == word: 
-            data.append(np.mean(ongoing_rep, axis=0).flatten())
-        return np.array(data)
+        if len(ongoing_word) == 0 and prev_w[0] is not None: 
+            data[prev_w[0]].append((prev_w[1], prev_w[2]))
+        elif prev_w[0] is not None:
+            rep = np.array(ongoing_rep)
+            rep = np.mean(rep, axis=0).flatten()
+            tok = ''
+            for t in ongoing_word: 
+                if t.startswith('##'): t = t[2:]
+                tok += t
+            if tok in vocab: 
+                data[tok].append((prev_w[1], rep)) 
+        return data
 
-    def cluster_embeddings(self, data, word, dim_reduct=None, rs=0): 
-        print("Starting clustering...")
-        assert data.shape[0] >= 500, "Data isn't of size 500 but instead " + str(data.shape[0])
-        if dim_reduct is not None:
-            outpath = LOGS + 'reddit_pca/' + word + '_' + \
-                str(dim_reduct) + '_' + str(rs) + '.joblib'
-            pca = PCA(n_components=dim_reduct, random_state=rs)
-            data = pca.fit_transform(data)
-            dump(pca, outpath)
-        ks = range(2, 10)
-        centroids = {} 
-        rss = np.zeros(len(ks))
-        for i, k in enumerate(ks):
-            km = KMeans(k, n_jobs=-1, random_state=rs)
-            km.fit(data)
-            rss[i] = km.inertia_
-            centroids[k] = km.cluster_centers_
-        crits = []
-        lamb = 10000
-        for i in range(len(ks)): 
-            k = ks[i] 
-            crit = rss[i] + lamb*k
-            crits.append(crit)
-        best_k = np.argmin(crits)
-        return centroids[ks[best_k]] 
+    def match_embeddings(self, data, vocab, subreddit, viz=False, dim_reduct=100, rs=0): 
+        '''
+        for each word and its reps, load centroid and match 
+        output: line#_user\tword\tcentroid#\n in a subreddit-specific file
+        '''
+        outfile = open(LOGS + 'senses/' + subreddit, 'w') 
+        for token in data:
+            # TODO: for visualization, save vectors that equate a specific token 
+            assert token in vocab, "This token " + token + " is not in the vocab!!!!"
+            centroids = np.load(LOGS + 'reddit_centroids/' + token + '.npy') 
+            rep_list = data[token]
+            IDs = []
+            reps = []
+            for tup in rep_list: 
+                IDs.append(tup[0])
+                reps.append(tup[1])
+            reps = np.array(reps)
+            inpath = LOGS + 'reddit_pca/' + token + \
+             '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
+            pca = load(inpath)
+            reps = pca.transform(reps)
+            assert reps.shape[1] == centroids.shape[1] 
+            sims = cosine_similarity(reps, centroids) # IDs x n_centroids
+            labels = np.argmax(sims, axis=1)
+            for i in range(len(IDs)): 
+                if viz:
+                    outfile.write(IDs[i] + '\t' + token + '\t' + str(labels[i]) + '\t' + \
+                       ' '.join(str(n) for n in reps[i]) + '\n')  
+                else: 
+                    outfile.write(IDs[i] + '\t' + token + '\t' + str(labels[i]) + '\n') 
+        outfile.close()
 
 def main(): 
-    word = sys.argv[1]
-    doc = LOGS + 'vocabs/docs/' + word
+    subreddit = sys.argv[1]
+    inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
+    vocab = set()
+    with open(LOGS + 'vocabs/tiny_vocab', 'r') as infile: 
+        for line in infile: 
+            vocab.add(line.strip())
+    vocab = set(['fit'])  # TODO: uncomment this line for visualization
     start = time.time()
-    model = EmbeddingClusterer()
-    instances = model.read_instances(doc)
+    model = EmbeddingMatcher()
+    sentences = model.read_sentences(inputfile) 
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
-    batched_data, batched_words, batched_masks, batched_users = model.get_batches(instances, batch_size)
+    batched_data, batched_words, batched_masks, batched_users = model.get_batches(sentences, batch_size)
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
-    embeddings, do_wordpiece = model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, word)
+    embeddings = model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, vocab)
     time3 = time.time()
     print("TOTAL TIME:", time3 - time2)
-    data = model.group_wordpiece(embeddings, word, do_wordpiece)
+    data = model.group_wordpiece(embeddings, vocab)
     time4 = time.time()
     print("TOTAL TIME:", time4 - time3)
-    centroids = model.cluster_embeddings(data, word, dim_reduct=100)
-    np.save(LOGS + 'reddit_centroids/' + word + '.npy', centroids)
+    model.match_embeddings(data, vocab, subreddit, viz=True, dim_reduct=100, rs=0)
     time5 = time.time()
     print("TOTAL TIME:", time5 - time4) 
-
+    
 
 if __name__ == "__main__":
     main()

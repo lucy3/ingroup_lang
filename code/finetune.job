@@ -10,10 +10,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
 
-python run_lm_finetuning.py --train_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_train/part-00000 --output_dir /global/scratch/lucy3_li/ingroup_lang/logs/finetuning/ --eval_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_test/part-00000 --model_name_or_path bert-base-uncased --mlm --do_train --do_eval --evaluate_during_training --do_lower_case --num_train_epochs 3 --learning_rate 5e-5 --weight_decay 0.01 --warmup_steps 10000 --adam_epsilon 1e-6 --gradient_accumulation_steps 8
+python run_lm_finetuning.py --train_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_train2/part-00000 --output_dir /global/scratch/lucy3_li/ingroup_lang/logs/finetuning/ --eval_data_file /global/scratch/lucy3_li/ingroup_lang/logs/finetune_input_test2/part-00000 --model_name_or_path bert-base-uncased --mlm --do_train --do_eval --evaluate_during_training --do_lower_case --num_train_epochs 3 --learning_rate 5e-5 --weight_decay 0.01 --warmup_steps 10000 --adam_epsilon 1e-6 --logging_steps 1000 --save_steps 1000 --per_gpu_train_batch_size 32 --per_gpu_eval_batch_size 32 --block_size 100 --local_rank 0
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate
