@@ -45,7 +45,7 @@ def get_data(sociolect_metric):
     X = []
     y = []
     y_bin = []
-    count_cut_off = 30
+    count_cut_off = 0
     if sociolect_metric == 'pmi': 
         path = root + '/logs/pmi/'
         cut_off = 0.8
@@ -230,9 +230,9 @@ def main():
     #predict_sociolects('tfidf')
     #predict_ols('pmi')
     #predict_ols('tfidf')
-    #u_tests('pmi')
-    #u_tests('tfidf')
-    matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
+    u_tests('pmi')
+    u_tests('tfidf')
+    #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":
     main()

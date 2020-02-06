@@ -3,8 +3,8 @@ File for getting vocab of words we want to get senses for
 """
 
 import os
-#from pyspark import SparkConf, SparkContext
-#from pyspark.sql import SQLContext
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 import json
 from collections import Counter, defaultdict
 import operator
@@ -17,9 +17,25 @@ ROOT = '/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts_dup/'
 LOG_DIR = ROOT + 'logs/'
 
-#conf = SparkConf()
-#sc = SparkContext(conf=conf)
-#sqlContext = SQLContext(sc)
+conf = SparkConf()
+sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
+
+def save_sr_vocab(percent_param): 
+    '''
+    for each subreddit, save the top percent_param*100% 
+    of words into a file
+    '''
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename:  
+            output_path = LOG_DIR + 'sr_sense_vocab/' + filename + '_' + str(percent_param*100)
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+            num_top_p = int(percent_param*len(d))
+            with open(output_path, 'w') as outfile: 
+                for w in d.most_common(num_top_p): 
+                    outfile.write(w[0].encode('utf-8', 'replace') + '\n')
+
 
 def get_vocab(percent_param, N):
     '''
@@ -88,8 +104,9 @@ def get_vocab_overlap(vocab1_path, vocab2_path):
 def main(): 
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
-    comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
+    #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
     #get_vocab(0.03, 1)
+    save_sr_vocab(0.03)
     sc.stop()
 
 if __name__ == "__main__":
