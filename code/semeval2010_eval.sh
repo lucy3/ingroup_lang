@@ -10,7 +10,7 @@ do
     do
         rm fscores.temp
         rm vmeasures.temp 
-        for i in {0..0}
+        for i in {0..9}
         do
             fscore=$(java -jar ../semeval-2010-task-14/evaluation/unsup_eval/fscore.jar ../logs/semeval2010/semeval2010_clusters${j}_${i}_${k} ../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key all | tail -1)
 

@@ -42,12 +42,6 @@ bert_dim=768
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-print('')
-print("********************************************")
-print("Running on: {}".format(device))
-print("********************************************")
-print('')
-
 class EmbeddingClusterer():
     def __init__(self):
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
@@ -56,7 +50,6 @@ class EmbeddingClusterer():
         self.model.to(device)
 
     def read_instances(self, inputfile): 
-        print("Reading sentences...")
         sentences = []
         i = 0
         line_number = 0
@@ -70,7 +63,6 @@ class EmbeddingClusterer():
         return sentences
 
     def get_batches(self, sentences, max_batch): 
-        print("Getting batches...")
         # each item in these lists is a sentence
         all_data = [] # indexed tokens, or word IDs
         all_words = [] # tokenized_text, or original words
@@ -133,7 +125,6 @@ class EmbeddingClusterer():
     def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, word): 
         ret = [] 
         do_wordpiece = True
-        print("Getting embeddings for batched_data of length", len(batched_data))
         for b in range(len(batched_data)):
             # each item in these lists/tensors is a sentence
             tokens_tensor = batched_data[b].to(device)
@@ -168,7 +159,6 @@ class EmbeddingClusterer():
         contain the vocab word of interest 
         - filters vectors so we only have vectors for the word of interest
         '''
-        print("Grouping wordpiece vectors: " + str(do_wordpiece))
         data = []
         prev_w = (None, None)
         ongoing_word = []
@@ -195,7 +185,6 @@ class EmbeddingClusterer():
         return np.array(data)
 
     def cluster_embeddings(self, data, word, dim_reduct=None, rs=0): 
-        print("Starting clustering...")
         assert data.shape[0] >= 500, "Data isn't of size 500 but instead " + str(data.shape[0])
         if dim_reduct is not None:
             outpath = LOGS + 'reddit_pca/' + word + '_' + \
@@ -222,25 +211,25 @@ class EmbeddingClusterer():
 
 def main(): 
     word = sys.argv[1]
-    doc = LOGS + 'vocabs/docs/' + word
+    print("WORD:", word)
+    with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
+        d = json.load(infile)
+    ID = d[word]
+    doc = LOGS + 'vocabs/docs/' + str(ID)
     start = time.time()
     model = EmbeddingClusterer()
     instances = model.read_instances(doc)
     time1 = time.time()
-    print("TOTAL TIME:", time1 - start)
     batched_data, batched_words, batched_masks, batched_users = model.get_batches(instances, batch_size)
     time2 = time.time()
-    print("TOTAL TIME:", time2 - time1)
     embeddings, do_wordpiece = model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, word)
     time3 = time.time()
-    print("TOTAL TIME:", time3 - time2)
     data = model.group_wordpiece(embeddings, word, do_wordpiece)
     time4 = time.time()
-    print("TOTAL TIME:", time4 - time3)
     centroids = model.cluster_embeddings(data, word, dim_reduct=100)
-    np.save(LOGS + 'reddit_centroids/' + word + '.npy', centroids)
+    np.save(LOGS + 'reddit_centroids/' + str(ID) + '.npy', centroids)
     time5 = time.time()
-    print("TOTAL TIME:", time5 - time4) 
+    print("TOTAL TIME:", time5 - start) 
 
 
 if __name__ == "__main__":

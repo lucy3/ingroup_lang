@@ -18,6 +18,7 @@ import random
 from nltk.tokenize import sent_tokenize, word_tokenize
 from functools import partial
 from nltk.stem import WordNetLemmatizer
+from transformers import BasicTokenizer
 #from stanfordnlp.server import CoreNLPClient
 
 wnl = WordNetLemmatizer()
@@ -400,12 +401,13 @@ def prep_finetuning2(num_epochs=3):
 
 def get_vocab_word_instances(line, vocab=None):
     # flatmap each comment to (vocab word, [comment])
+    tokenizer = BasicTokenizer(do_lower_case=True)
     line = line.strip()
-    tokens = set(word_tokenize(line.lower()))
+    tokens = set(tokenizer.tokenize(line))
     ret = []
-    union = tokens & vocab
+    union = tokens & set(vocab.keys())
     for w in union: 
-        ret.append((w, [line]))
+        ret.append((vocab[w], [line]))
     if len(union) == 0: 
         ret.append((None, [line]))
     return ret 
@@ -413,13 +415,17 @@ def get_vocab_word_instances(line, vocab=None):
 def sample_vocab_lines(tup): 
     w = tup[0]
     lines = tup[1]
-    instances = random.sample(lines, 500)
+    try: 
+        instances = random.sample(lines, 500)
+    except ValueError: 
+        print("*****Not enough samples for word:", w)
+        instances = []
     return (w, instances)
 
 def save_vocab_instances_doc(tup): 
     w = tup[0]
     lines = tup[1]
-    with open(LOGS + 'vocabs/docs/' + w, 'w') as outfile:
+    with open(LOGS + 'vocabs/docs/' + str(w), 'w') as outfile:
         for l in lines: 
             outfile.write(l + '\n')
 
@@ -428,12 +434,14 @@ def sample_word_instances():
     Since we only want to cluster 500 instances, 
     we sample 500 instances. 
     '''
-    vocab_file = '../logs/vocabs/tiny_vocab'
-    vocab = set()
+    vocab_file = LOGS + 'vocabs/3_1_filtered'
+    vocab = {} 
     with open(vocab_file, 'r') as infile: 
-        for line in infile: 
+        for i, line in enumerate(infile): 
             w = line.strip().split(',')[0]
-            vocab.add(w)
+            vocab[w] = i
+    with open(LOGS + 'vocabs/vocab_map.json', 'w') as outfile: 
+        json.dump(vocab, outfile)
     rdds = []
     for folder in os.listdir(SR_FOLDER_MONTH): 
         path = SR_FOLDER_MONTH + folder + '/RC_sample'

@@ -216,8 +216,7 @@ class EmbeddingMatcher():
         output: line#_user\tword\tcentroid#\n in a subreddit-specific file
         '''
         outfile = open(LOGS + 'senses/' + subreddit, 'w') 
-        for token in data:
-            # TODO: for visualization, save vectors that equate a specific token 
+        for token in data: 
             assert token in vocab, "This token " + token + " is not in the vocab!!!!"
             centroids = np.load(LOGS + 'reddit_centroids/' + token + '.npy') 
             rep_list = data[token]
@@ -249,7 +248,6 @@ def main():
     with open(LOGS + 'vocabs/tiny_vocab', 'r') as infile: 
         for line in infile: 
             vocab.add(line.strip())
-    vocab = set(['fit'])  # TODO: uncomment this line for visualization
     start = time.time()
     model = EmbeddingMatcher()
     sentences = model.read_sentences(inputfile) 
@@ -264,7 +262,7 @@ def main():
     data = model.group_wordpiece(embeddings, vocab)
     time4 = time.time()
     print("TOTAL TIME:", time4 - time3)
-    model.match_embeddings(data, vocab, subreddit, viz=True, dim_reduct=100, rs=0)
+    model.match_embeddings(data, vocab, subreddit, dim_reduct=100, rs=0)
     time5 = time.time()
     print("TOTAL TIME:", time5 - time4) 
     

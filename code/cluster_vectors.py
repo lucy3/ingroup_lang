@@ -461,12 +461,11 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    #for dr in [2, 10, 20, 50, 100, 150]:  
-    #    for lamb in [1000, 5000, 15000]: 
-    #for r in range(10): 
-    for r in range(4, 10): 
-        semeval_cluster_training(semeval2010=True, dim_reduct=200, rs=r, lamb=10000)
-        semeval_cluster_test(semeval2010=True, dim_reduct=200, rs=r, lamb=10000)
+    for dr in [10, 20, 50, 100, 150]:
+        for lamb in [5000]:    
+            for r in range(10): 
+                semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=r, lamb=lamb)
+                semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=r, lamb=lamb)
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_1')
 
