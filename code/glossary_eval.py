@@ -74,45 +74,57 @@ def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0):
     else: 
         raise ValueError("Not implemented yet!")
     rs = []
+    rs2 = []
     ps = []
     fs = []
     print("Score cutoff =", score_cutoff, "| Count cutoff =", count_cutoff)
     log_file = open(SCORE_LOG + metric + '_' + str(score_cutoff) + '_' + str(count_cutoff), 'w')
-    log_file.write("subreddit recall precision f1\n")
+    log_file.write("subreddit recall recall2 precision f1\n")
     for subreddit_file in os.listdir(inpath): 
         if not subreddit_file.endswith('_0.2.csv'): continue
         subreddit_name = subreddit_file.replace('_0.2.csv', '')
         if subreddit_name not in sr2terms: continue
         sociolect_words = set() 
+        all_sociolect_words = set()
         with open(inpath + subreddit_file, 'r') as infile: 
             reader = csv.DictReader(infile, delimiter=',')
             for row in reader: 
+                all_sociolect_words.add(row['word'])
                 if float(row[metric]) > score_cutoff and int(row['count']) > count_cutoff: 
                     sociolect_words.add(row['word'])
         num_gloss_words = len(sr2terms[subreddit_name])
+        num_gloss_words_in_list = len(set(sr2terms[subreddit_name]) & all_sociolect_words)
         num_our_list = len(sociolect_words)
         overlap = len(set(sr2terms[subreddit_name]) & sociolect_words)
         recall = overlap / float(num_gloss_words)
+        if num_gloss_words_in_list > 0: 
+            recall2 = overlap / float(num_gloss_words_in_list)
+        else: 
+            recall2 = 0
         if num_our_list > 0: 
             precision = overlap / float(num_our_list)
         else: 
             precision = 0
-        if (recall + precision) > 0: 
-            f1 = 2*precision*recall/(recall + precision)
+        if (recall2 + precision) > 0: 
+            f1 = 2*precision*recall2/(recall2 + precision)
         else: 
             f1 = 0
-        log_file.write(subreddit_name + ' ' + str(recall) + ' ' + str(precision) + ' ' + str(f1) + '\n') 
+        log_file.write(subreddit_name + ' ' + str(recall) + ' ' + \
+            str(recall2) + ' ' + str(precision) + ' ' + str(f1) + '\n') 
         rs.append(recall)
+        rs2.append(recall2)
         ps.append(precision)
         fs.append(f1)
     r = np.mean(rs)
+    r2 = np.mean(rs2)
     p = np.mean(ps)
     f = np.mean(fs)
     log_file.close()
     print("Recall:", r)
+    print("Recall2:", r2)
     print("Precision:", p)
     print("F1 score:", f)
-    return r, p, f
+    return r2, p, f
 
 def find_best_parameters():
     sr2terms = get_sr2terms() 
