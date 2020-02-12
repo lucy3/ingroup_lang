@@ -7,6 +7,8 @@ module load java
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/py3pt6
 
-time /global/home/users/lucy3_li/spark-2.4.4-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 64G --driver-memory 64G /global/scratch/lucy3_li/ingroup_lang/code/analyze_bert.py
+#time /global/home/users/lucy3_li/spark-2.4.4-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 64G --driver-memory 64G /global/scratch/lucy3_li/ingroup_lang/code/analyze_bert.py
+
+python analyze_bert.py
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate

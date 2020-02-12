@@ -2,7 +2,7 @@
 Note: just run Spark locally
 """
 
-from pyspark import SparkConf, SparkContext
+#from pyspark import SparkConf, SparkContext
 import numpy as np
 #from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
@@ -15,8 +15,8 @@ ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 ALL_VEC_FOLDER = ROOT + 'logs/entire_sr_vectors/'
 LOGS = ROOT + 'logs/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
 
 from nltk.stem import WordNetLemmatizer
 wnl = WordNetLemmatizer()
@@ -85,9 +85,14 @@ def compare_word_across_subreddits(subreddit_list, word):
     waste time saving every vector, only ones we care about
     for some visualization)
     '''
-    srs = []
-    senses = []
-    
+    marker_options = ['o', 'v', 'X', 's', 'D', '<', 'P', '*', '^', '>']
+    color_options = ['tab:blue', 'tab:orange', 'tab:green', 
+         'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 
+         'tab:gray', 'tab:olive', 'tab:cyan']
+    srs = defaultdict(list) # subreddit name : indices
+    sense_colors = []
+    X = []
+    j = 0
     for sr in subreddit_list: 
         sense_path = LOGS + 'senses/' + sr
         with open(sense_path, 'r') as infile: 
@@ -95,8 +100,27 @@ def compare_word_across_subreddits(subreddit_list, word):
                 contents = line.strip().split('\t') 
                 w = contents[1]
                 if word != w: continue
-                sense = contents[2]
+                sense_colors.append(int(contents[2]))
                 rep = np.array([float(i) for i in contents[3].split()])
+                X.append(rep)
+                srs[sr].append(j)
+                j += 1
+    sense_colors = np.array(sense_colors) 
+    X = np.array(X)
+    X_embedded = TSNE(n_components=2, n_jobs=-1).fit_transform(X)
+    fig, ax = plt.subplots()
+    legend_elements = [] 
+    for i, sr in enumerate(subreddit_list): 
+        idx = srs[sr]
+        colors = [color_options[k] for k in sense_colors[idx]]
+        # can put c=colors if we want to color by sense 
+        # can put c=color_options[i] if we want to color by subreddit        
+        ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=color_options[i], \
+            marker='.', alpha=0.5)
+        legend_elements.append(Line2D([0], [0], marker='o', color='w', label=sr, 
+                                   markerfacecolor=color_options[i], markersize=10))
+    ax.legend(handles=legend_elements)
+    plt.savefig('../logs/bert_reddit_' + word + '.png') 
 
 def compare_word_across_subreddits_old(subreddit_list, word): 
     '''
@@ -261,10 +285,11 @@ def main():
     #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'fire')
     #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], 'sick')
     #compare_semeval2013_lemmas('add.v', test=True)
-    plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters20_0')
-    plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0')
-    plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0_normalize') 
-    sc.stop()
+    #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters20_0')
+    #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0')
+    #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0_normalize') 
+    compare_word_across_subreddits(['advice', 'keto', 'books', 'fitness', 'fashionreps'], 'fit')
+    #sc.stop()
 
 if __name__ == '__main__': 
     main()

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Job name:
+#SBATCH --job-name=reddit
+# Partition:
+#SBATCH --partition=savio2_1080ti
+#
+# Wall clock limit:
+#SBATCH --time=2-00:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --gres=gpu:1
+
+
+source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
+
+time awk -F "," '{print $1}' ../logs/vocabs/tiny_vocab | parallel 'python bert_cluster_train.py {}' &
+wait
+
+source /global/scratch/lucy3_li/anaconda3/bin/deactivate
