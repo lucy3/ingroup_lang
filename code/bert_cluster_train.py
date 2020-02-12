@@ -42,10 +42,10 @@ bert_dim=768
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class EmbeddingClusterer():
+class EmbeddingClusterer(tokenizer, model):
     def __init__(self):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-        self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+        self.tokenizer = tokenizer
+        self.model = model
         self.model.eval()
         self.model.to(device)
 
@@ -184,7 +184,7 @@ class EmbeddingClusterer():
             data.append(np.mean(ongoing_rep, axis=0).flatten())
         return np.array(data)
 
-    def cluster_embeddings(self, data, word, dim_reduct=None, rs=0): 
+    def cluster_embeddings(self, data, word, dim_reduct=None, rs=0, lamb=10000): 
         assert data.shape[0] >= 500, "Data isn't of size 500 but instead " + str(data.shape[0])
         if dim_reduct is not None:
             outpath = LOGS + 'reddit_pca/' + word + '_' + \
@@ -201,7 +201,6 @@ class EmbeddingClusterer():
             rss[i] = km.inertia_
             centroids[k] = km.cluster_centers_
         crits = []
-        lamb = 10000
         for i in range(len(ks)): 
             k = ks[i] 
             crit = rss[i] + lamb*k
@@ -216,8 +215,17 @@ def main():
         d = json.load(infile)
     ID = d[word]
     doc = LOGS + 'vocabs/docs/' + str(ID)
+    finetuned = sys.argv[2]
+    if finetuned == "finetune": 
+        print("Finetuned BERT-base")
+        tokenizer = BertTokenizer.from_pretrained(LOGS + 'finetuning/', do_lower_case=True)
+        model = BertModel.from_pretrained(LOGS + 'finetuning/', output_hidden_states=True) 
+    else: 
+        print("BERT-base")
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+        model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
     start = time.time()
-    model = EmbeddingClusterer()
+    model = EmbeddingClusterer(tokenizer, model)
     instances = model.read_instances(doc)
     time1 = time.time()
     batched_data, batched_words, batched_masks, batched_users = model.get_batches(instances, batch_size)
@@ -226,7 +234,7 @@ def main():
     time3 = time.time()
     data = model.group_wordpiece(embeddings, word, do_wordpiece)
     time4 = time.time()
-    centroids = model.cluster_embeddings(data, word, dim_reduct=100)
+    centroids = model.cluster_embeddings(data, word, dim_reduct=10)
     np.save(LOGS + 'reddit_centroids/' + str(ID) + '.npy', centroids)
     time5 = time.time()
     print("TOTAL TIME:", time5 - start) 

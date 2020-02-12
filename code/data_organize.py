@@ -18,7 +18,7 @@ import random
 from nltk.tokenize import sent_tokenize, word_tokenize
 from functools import partial
 from nltk.stem import WordNetLemmatizer
-from transformers import BasicTokenizer
+from transformers import BasicTokenizer, BertTokenizer
 #from stanfordnlp.server import CoreNLPClient
 
 wnl = WordNetLemmatizer()
@@ -298,11 +298,11 @@ def count_comments_all():
        outfile.write(sr[0] + '\t' + str(sr[1]) + '\n') 
     outfile.close()
 
-def sentences_with_target_words(line, target_set=set()): 
+def sentences_with_target_words(line, tokenizer=None, target_set=set()): 
     sentences = sent_tokenize(line.strip()) 
     ret = []
     for s in sentences: 
-       tokens = set(word_tokenize(s.lower()))
+       tokens = set(tokenizer.tokenize(s.lower()))
        for item in target_set: 
            lemma = item.split('.')[0]
            pos = item.split('.')[1]
@@ -337,7 +337,9 @@ def filter_ukwac():
             target_set.add(f.replace('.xml', ''))
     data = sc.textFile(DATA + 'ukwac_preproc')
     data = data.filter(lambda line: not line.startswith("CURRENT URL "))
-    data = data.flatMap(partial(sentences_with_target_words, target_set=target_set))
+    tokenizer = BasicTokenizer(do_lower_case=True) 
+    data = data.flatMap(partial(sentences_with_target_words, tokenizer=tokenizer, 
+        target_set=target_set))
     data = data.sample(False,0.05,0)
     counts = data.map(count_ukwac_lemmas) 
     counts = counts.reduceByKey(lambda n1, n2: n1 + n2)
@@ -455,16 +457,54 @@ def sample_word_instances():
     all_tups = all_tups.reduceByKey(lambda n1, n2: n1 + n2)
     all_tups = all_tups.map(sample_vocab_lines)
     all_tups = all_tups.foreach(save_vocab_instances_doc)
-    
+
+def tokenizer_check(): 
+    path = SR_FOLDER_MONTH + 'askreddit/RC_sample'
+    data = sc.textFile(path)
+    sample = data.takeSample(False, 100) 
+    tokenizer1 = BasicTokenizer(do_lower_case=True)
+    tokenizer2 = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+    success = True
+    for s in sample: 
+        tokens1 = tokenizer1.tokenize(s)
+        tokens2 = tokenizer2.tokenize(s)
+        prev_word = None
+        tokens3 = []
+        ongoing_word = []
+        for w in tokens2: 
+           if w.startswith('##'): 
+               if not prev_word.startswith('##'): 
+                   ongoing_word.append(prev_word)
+               ongoing_word.append(w[2:])
+           else: 
+               if len(ongoing_word) == 0 and prev_word is not None: 
+                   tokens3.append(prev_word)
+               elif prev_word is not None:
+                   tokens3.append(''.join(ongoing_word))
+               ongoing_word = []
+           prev_word = w
+        if len(ongoing_word) == 0 and prev_word is not None: 
+           tokens3.append(prev_word)
+        elif prev_word is not None: 
+           tokens3.append(''.join(ongoing_word))
+        if tokens3 != tokens1: 
+           print("OH NOOOOOOOOOO")
+           print(tokens1)
+           print(tokens3) 
+           success = False
+    if success: 
+        print("TOKENS MATCHED UP!")
+            
 def main(): 
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
     #prep_finetuning()
-    #filter_ukwac()
+    filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
-    sample_word_instances()
+    #sample_word_instances()
+    #tokenizer_check()
     sc.stop()
 
 if __name__ == '__main__':

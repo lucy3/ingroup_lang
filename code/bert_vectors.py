@@ -14,7 +14,7 @@ from nltk.stem import WordNetLemmatizer
 root = '/global/scratch/lucy3_li/'
 #root = '/data0/lucy/'
 sem_eval_trial_data = '../semeval-2012-task-13-trial-data/data/semeval-2013-task-10-trial-data.xml'
-sem_eval_train = root + 'ingroup_lang/logs/ukwac2.txt' # TODO
+sem_eval_train = root + 'ingroup_lang/logs/ukwac2.txt' 
 sem_eval_test = '../SemEval-2013-Task-13-test-data/contexts/xml-format/'
 sem_eval_2010_train = root + 'ingroup_lang/semeval-2010-task-14/training_data/'
 sem_eval_2010_test = root + 'ingroup_lang/semeval-2010-task-14/test_data/'
@@ -300,8 +300,8 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False):
 
  
 def main(): 
-    run_bert_on_reddit()
-    #run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True)
+    #run_bert_on_reddit()
+    run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=True)
     #run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=True)
 
 if __name__ == "__main__":

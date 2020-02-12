@@ -210,7 +210,7 @@ class EmbeddingMatcher():
                 data[tok].append((prev_w[1], rep)) 
         return data
 
-    def match_embeddings(self, data, vocab, subreddit, viz=False, dim_reduct=100, rs=0): 
+    def match_embeddings(self, data, vocab, subreddit, viz=False, dim_reduct=10, rs=0): 
         '''
         for each word and its reps, load centroid and match 
         output: line#_user\tword\tcentroid#\n in a subreddit-specific file
@@ -262,7 +262,7 @@ def main():
     data = model.group_wordpiece(embeddings, vocab)
     time4 = time.time()
     print("TOTAL TIME:", time4 - time3)
-    model.match_embeddings(data, vocab, subreddit, dim_reduct=100, rs=0)
+    model.match_embeddings(data, vocab, subreddit, dim_reduct=10, rs=0)
     time5 = time.time()
     print("TOTAL TIME:", time5 - time4) 
     

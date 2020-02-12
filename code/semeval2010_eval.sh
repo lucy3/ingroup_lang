@@ -3,7 +3,7 @@
 module load java
 
 dims=(2 10 20 50 100 150)
-lambs=(1000 5000 10000 15000)
+lambs=(1000 10000 15000)
 for j in "${dims[@]}"
 do
     for k in "${lambs[@]}"
