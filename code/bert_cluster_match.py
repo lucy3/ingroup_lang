@@ -49,9 +49,9 @@ print("********************************************")
 print('')
 
 class EmbeddingMatcher():
-    def __init__(self):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-        self.model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+    def __init__(self, tokenizer, model_name):
+        self.tokenizer = tokenizer
+        self.model = model_name
         self.model.eval()
         self.model.to(device)
 
@@ -210,15 +210,22 @@ class EmbeddingMatcher():
                 data[tok].append((prev_w[1], rep)) 
         return data
 
-    def match_embeddings(self, data, vocab, subreddit, viz=False, dim_reduct=10, rs=0): 
+    def match_embeddings(self, data, vocab, subreddit, viz=False, dim_reduct=10, rs=0, finetuned=False): 
         '''
         for each word and its reps, load centroid and match 
         output: line#_user\tword\tcentroid#\n in a subreddit-specific file
         '''
-        outfile = open(LOGS + 'senses/' + subreddit, 'w') 
+        if finetuned: 
+            outfile = open(LOGS + 'finetuned_senses/' + subreddit, 'w')
+            centroids_folder = LOGS + 'finetuned_reddit_centroids/' 
+            pca_folder = LOGS + 'finetuned_reddit_pca/' 
+        else: 
+            outfile = open(LOGS + 'senses/' + subreddit, 'w')
+            centroids_folder = LOGS + 'reddit_centroids/' 
+            pca_folder = LOGS + 'reddit_pca/'
         for token in data: 
             assert token in vocab, "This token " + token + " is not in the vocab!!!!"
-            centroids = np.load(LOGS + 'reddit_centroids/' + token + '.npy') 
+            centroids = np.load(centroids_folder + token + '.npy') 
             rep_list = data[token]
             IDs = []
             reps = []
@@ -226,7 +233,7 @@ class EmbeddingMatcher():
                 IDs.append(tup[0])
                 reps.append(tup[1])
             reps = np.array(reps)
-            inpath = LOGS + 'reddit_pca/' + token + \
+            inpath = pca_folder + token + \
              '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
             pca = load(inpath)
             reps = pca.transform(reps)
@@ -243,13 +250,23 @@ class EmbeddingMatcher():
 
 def main(): 
     subreddit = sys.argv[1]
+    print(subreddit)
     inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
     vocab = set()
     with open(LOGS + 'vocabs/tiny_vocab', 'r') as infile: 
         for line in infile: 
             vocab.add(line.strip())
     start = time.time()
-    model = EmbeddingMatcher()
+    finetuned = bool(sys.argv[2])
+    if finetuned: 
+        print("Finetuned BERT")
+        tokenizer = BertTokenizer.from_pretrained(LOGS + 'finetuning/', do_lower_case=True)
+        model_name = BertModel.from_pretrained(LOGS + 'finetuning/', output_hidden_states=True) 
+    else: 
+        print("BERT-base")
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+        model_name = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+    model = EmbeddingMatcher(tokenizer, model_name)
     sentences = model.read_sentences(inputfile) 
     time1 = time.time()
     print("TOTAL TIME:", time1 - start)
@@ -262,7 +279,7 @@ def main():
     data = model.group_wordpiece(embeddings, vocab)
     time4 = time.time()
     print("TOTAL TIME:", time4 - time3)
-    model.match_embeddings(data, vocab, subreddit, dim_reduct=10, rs=0)
+    model.match_embeddings(data, vocab, subreddit, dim_reduct=10, rs=0, finetuned=finetuned)
     time5 = time.time()
     print("TOTAL TIME:", time5 - time4) 
     
