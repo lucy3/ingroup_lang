@@ -6,8 +6,8 @@ to actual subreddit glossaries.
 import csv
 from collections import Counter, defaultdict
 import numpy as np
-import corenlp
 import os 
+from transformers import BasicTokenizer
 
 ROOT = '/data0/lucy/ingroup_lang/'
 SR_LIST = ROOT + 'data/glossary_list.csv'
@@ -44,15 +44,15 @@ def basic_stats():
     print("Max number of terms:", np.max(sr_count.values()))
 
 def get_sr2terms(): 
+    tokenizer = BasicTokenizer(do_lower_case=True)
     sr2terms = defaultdict(list)
-    with corenlp.CoreNLPClient(annotators="tokenize".split()) as client:
-        with open(TERMS, 'r') as infile: 
-            reader = csv.DictReader(infile, delimiter=',')
-            for row in reader:
-                term = row['term'].lower()
-                ann = client.annotate(term)
-                for tok in ann.sentencelessToken:
-                    sr2terms[row['subreddit']].append(tok.word)
+    with open(TERMS, 'r') as infile: 
+        reader = csv.DictReader(infile, delimiter=',')
+        for row in reader:
+            term = row['term'].strip().lower()
+            # ignore MWEs
+            if len(tokenizer.tokenize(term)) > 1: continue
+            sr2terms[row['subreddit']].append(term)
     return sr2terms
  
         

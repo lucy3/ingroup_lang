@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# this is only used if input is Stanford CoreNLP tokenizer
+# we are using tokenizer.sh by itself instead!!!!
+
 # create filelist of files to run remove_duplicates.py on 
 # run parallel on these files
 file_list=/data0/lucy/ingroup_lang/logs/file_list.txt

@@ -12,9 +12,10 @@ import re, string
 import csv
 import math
 from nltk.tokenize import word_tokenize
+#from transformers import BasicTokenizer
 
 ROOT = '/data0/lucy/ingroup_lang/'
-WORD_COUNT_DIR = ROOT + 'logs/word_counts_dup/'
+WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 LOG_DIR = ROOT + 'logs/'
 
 conf = SparkConf()
@@ -77,11 +78,12 @@ def comments_with_vocab(vocab_file):
             contents = line.strip().split(',')
             vocab.add(contents[0])
     d = Counter()
+    tokenizer = BasicTokenizer(do_lower_case=True)
     for folder in os.listdir(ROOT + 'subreddits_month/'): 
         if not os.path.isdir(ROOT + 'subreddits_month/' + folder): continue
         data = sc.textFile(ROOT + 'subreddits_month/' + folder + '/RC_sample')
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
-        data = data.map(lambda line: set(word_tokenize(line.lower())))
+        data = data.map(lambda line: set(tokenizer.tokenize(line.lower())))
         data = data.map(lambda s: (len(vocab & s), 1))
         data = data.filter(lambda tup: tup[0] != 0)
         data = data.reduceByKey(lambda n1, n2: n1 + n2)
@@ -105,7 +107,7 @@ def main():
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
     #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
-    #get_vocab(0.03, 1)
+    get_vocab(0.03, 1)
     save_sr_vocab(0.03)
     sc.stop()
 

@@ -188,10 +188,10 @@ def word_tfidf(percent_param=0.2):
 
 def main(): 
     count_words()
-    #count_overall_words()
-    #calculate_pmi()
-    #count_document_freq()
-    #word_tfidf()
+    count_overall_words()
+    calculate_pmi()
+    count_document_freq()
+    word_tfidf()
     sc.stop()
 
 if __name__ == '__main__':
