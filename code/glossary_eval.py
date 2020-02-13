@@ -150,10 +150,35 @@ def find_best_parameters():
             best = (metric, cutoff, r, p, f)
     print("BEST PARAMS (metric, cutoff, recall, precision, f1 score):")
     print(best)
+    
+def sense_vocab_coverage(): 
+    sr2terms = get_sr2terms()
+    sense_vocab_path = ROOT + 'logs/sr_sense_vocab/'
+    big_vocab = set()
+    with open(ROOT + 'logs/vocabs/10_1_filtered', 'r') as infile: 
+        for line in infile: 
+            big_vocab.add(line.strip())
+    coverage = [] 
+    freq_coverage = [] 
+    for sr in sr2terms: 
+        inpath = sense_vocab_path + sr + '_10.0' 
+        vocab = set()
+        with open(inpath, 'r') as infile: 
+            for line in infile: 
+                vocab.add(line.strip())
+        terms = set(sr2terms[sr])
+        top_percent = vocab & terms
+        common = big_vocab & top_percent
+        print(sr, len(common), common)
+        freq_coverage.append(len(top_percent))
+        coverage.append(len(common)) 
+    print("AVERAGE # OF TERMS IN TOP PERCENT", np.mean(freq_coverage))
+    print("AVERAGE # OF TERMS IN VOCAB:", np.mean(coverage))
 
 def main(): 
     #basic_stats()
-    find_best_parameters()
+    #find_best_parameters()
+    sense_vocab_coverage()
 
 if __name__ == '__main__':
     main()

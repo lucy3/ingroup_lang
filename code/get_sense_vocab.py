@@ -107,8 +107,8 @@ def main():
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
     #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
-    get_vocab(0.03, 1)
-    save_sr_vocab(0.03)
+    get_vocab(0.1, 1)
+    save_sr_vocab(0.1)
     sc.stop()
 
 if __name__ == "__main__":

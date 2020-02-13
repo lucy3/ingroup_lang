@@ -23,8 +23,8 @@ from transformers import BasicTokenizer, BertTokenizer
 
 wnl = WordNetLemmatizer()
 
-#ROOT = '/data0/lucy/ingroup_lang/'
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 #ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
@@ -455,8 +455,11 @@ def sample_word_instances():
         rdds.append(data)
     all_tups = sc.union(rdds)
     all_tups = all_tups.reduceByKey(lambda n1, n2: n1 + n2)
-    all_tups = all_tups.map(sample_vocab_lines)
-    all_tups = all_tups.foreach(save_vocab_instances_doc)
+    sample_tups = all_tups.map(sample_vocab_lines)
+    all_tups.unpersist()
+    all_tups = None
+    sc._jvm.System.gc()
+    sample_tups = sample_tups.foreach(save_vocab_instances_doc)
 
 def tokenizer_check(): 
     path = SR_FOLDER_MONTH + 'askreddit/RC_sample'
