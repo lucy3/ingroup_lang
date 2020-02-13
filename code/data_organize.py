@@ -436,7 +436,7 @@ def sample_word_instances():
     Since we only want to cluster 500 instances, 
     we sample 500 instances. 
     '''
-    vocab_file = LOGS + 'vocabs/3_1_filtered'
+    vocab_file = LOGS + 'vocabs/10_1_filtered'
     vocab = {} 
     with open(vocab_file, 'r') as infile: 
         for i, line in enumerate(infile): 
@@ -500,10 +500,10 @@ def main():
     #create_subreddit_docs()
     #create_sr_user_docs() 
     #prep_finetuning()
-    filter_ukwac()
+    #filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
-    #sample_word_instances()
+    sample_word_instances()
     #tokenizer_check()
     sc.stop()
 

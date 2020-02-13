@@ -253,6 +253,7 @@ def main():
     print(subreddit)
     inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
     vocab = set()
+    # TODO: change to only matching words in subreddit's sense vocab & 10_1_filtered
     with open(LOGS + 'vocabs/tiny_vocab', 'r') as infile: 
         for line in infile: 
             vocab.add(line.strip())

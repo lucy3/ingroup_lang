@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=data_organize
+#SBATCH --job-name=vocab_docs
 #SBATCH --partition=savio2_bigmem
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
