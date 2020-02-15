@@ -23,8 +23,8 @@ from transformers import BasicTokenizer, BertTokenizer
 
 wnl = WordNetLemmatizer()
 
-ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 #ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
@@ -451,14 +451,17 @@ def sample_word_instances():
         data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
         data = data.flatMap(partial(get_vocab_word_instances, vocab=vocab))
         data = data.filter(lambda tup: tup[0] is not None)
-        data = data.reduceByKey(lambda n1, n2: n1 + n2) 
-        rdds.append(data)
+        app = data.reduceByKey(lambda n1, n2: n1 + n2)
+        #data.unpersist()
+        #data = None
+        #sc._jvm.System.gc()
+        rdds.append(app)
     all_tups = sc.union(rdds)
     all_tups = all_tups.reduceByKey(lambda n1, n2: n1 + n2)
     sample_tups = all_tups.map(sample_vocab_lines)
-    all_tups.unpersist()
-    all_tups = None
-    sc._jvm.System.gc()
+    #all_tups.unpersist()
+    #all_tups = None
+    #sc._jvm.System.gc()
     sample_tups = sample_tups.foreach(save_vocab_instances_doc)
 
 def tokenizer_check(): 

@@ -3,14 +3,14 @@ import numpy as np
 import math
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import normalized_mutual_info_score, adjusted_mutual_info_score
-import bcubed
+#import bcubed
 from collections import defaultdict, Counter
 import json
 import os
 import xml.etree.ElementTree as ET
 import re
 import string
-import spacy
+#import spacy
 from functools import partial
 from sklearn.decomposition import PCA
 import random
@@ -19,9 +19,9 @@ import os.path
 from joblib import dump, load
 from nltk.stem import WordNetLemmatizer
 from sklearn.preprocessing import StandardScaler
-from pyclustering.cluster.xmeans import xmeans
-from pyclustering.cluster.encoder import type_encoding, cluster_encoder
-from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
+#from pyclustering.cluster.xmeans import xmeans
+#from pyclustering.cluster.encoder import type_encoding, cluster_encoder
+#from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 
 wnl = WordNetLemmatizer()
 
@@ -328,9 +328,11 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, lamb=1000
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
     data = data.map(sample_vectors)
-    data = data.map(partial(kmeans_with_crit, dim_reduct=dim_reduct, 
+    out = data.map(partial(kmeans_with_crit, dim_reduct=dim_reduct, 
          semeval2010=semeval2010, rs=rs, lamb=lamb, normalize=normalize)) 
-    clustered_IDs = data.collect()
+    data.unpersist()
+    data = None
+    clustered_IDs = out.collect()
     sc.stop() 
     for tup in clustered_IDs: 
         ID = tup[0][0]
@@ -399,9 +401,11 @@ def semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=0, lamb=10000, n
         data = data.filter(semeval_words_of_interest)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
-    data = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, 
+    out = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, 
         dim_reduct=dim_reduct, rs=rs, lamb=lamb, normalize=normalize))
-    id_labels = data.collectAsMap()
+    data.unpersist()
+    data = None
+    id_labels = out.collectAsMap()
     sc.stop()
     with open(LOGS + outname, 'w') as outfile: 
         for ID in id_labels: 
@@ -461,7 +465,7 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    for dr in [50, 100, 150]:
+    for dr in [100, 150]:
         for lamb in [5000]:    
             for r in range(1, 5): 
                 semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=r, lamb=lamb)
