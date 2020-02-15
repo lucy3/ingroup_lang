@@ -11,6 +11,7 @@ import operator
 import re, string
 import csv
 import math
+import numpy as np
 from nltk.tokenize import word_tokenize
 #from transformers import BasicTokenizer
 
@@ -102,13 +103,33 @@ def get_vocab_overlap(vocab1_path, vocab2_path):
             contents = line.strip().split(',')
             vocab2.add(contents[0])
     print("OVERLAP between", vocab1_path, vocab2_path, "is:", len(vocab1 & vocab2))
+
+def approximate_num_matches(): 
+    '''
+    Get an approx idea of how many vocab words we'll be matching for each subreddit
+    '''
+    vocab = set()
+    with open(LOG_DIR + 'vocabs/10_1_filtered', 'r') as infile:
+        for line in infile: 
+             vocab.add(line.strip())
+    overlaps = []
+    for filename in os.listdir(LOG_DIR + 'sr_sense_vocab/'): 
+        if not filename.endswith('_10.0'): continue
+        path = LOG_DIR + 'sr_sense_vocab/' + filename 
+        sr_vocab = set()
+        with open(path, 'r') as infile: 
+            for line in infile: 
+                sr_vocab.add(line.strip())
+        overlaps.append(len(vocab & sr_vocab))
+    print("AVERAGE NUM MATCHES", np.mean(overlaps))
         
 def main(): 
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
     #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
-    get_vocab(0.1, 1)
-    save_sr_vocab(0.1)
+    #get_vocab(0.1, 1)
+    #save_sr_vocab(0.1)
+    approximate_num_matches()
     sc.stop()
 
 if __name__ == "__main__":
