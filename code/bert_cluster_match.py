@@ -134,6 +134,9 @@ class EmbeddingMatcher():
             if max_len > 200: 
                 current_batch = 6
         return batched_data, batched_words, batched_masks, batched_users
+
+    def get_embeddings_and_match(self, batched_data, batched_words, batched_masks, batched_users, vocab): 
+        pass
     
     def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, vocab): 
         ret = [] 
@@ -160,8 +163,9 @@ class EmbeddingMatcher():
                         hidden_layers.append(vec)
                     # concatenate last four layers
                     rep = torch.cat((hidden_layers[0], hidden_layers[1], 
-                                hidden_layers[2], hidden_layers[3]), 0) 
-                    ret.append((w, users[sent_i], rep.cpu().numpy().reshape(1, -1)[0]))
+                                hidden_layers[2], hidden_layers[3]), 0)
+                    rep =  rep.cpu().numpy().reshape(1, -1)[0]
+                    ret.append((w, users[sent_i], rep))
         return ret
 
     def group_wordpiece(self, embeddings, vocab): 
@@ -223,9 +227,12 @@ class EmbeddingMatcher():
             outfile = open(LOGS + 'senses/' + subreddit, 'w')
             centroids_folder = LOGS + 'reddit_centroids/' 
             pca_folder = LOGS + 'reddit_pca/'
+        with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
+            d = json.load(infile)
         for token in data: 
             assert token in vocab, "This token " + token + " is not in the vocab!!!!"
-            centroids = np.load(centroids_folder + token + '.npy') 
+            token_id = str(d[token])
+            centroids = np.load(centroids_folder + token_id + '.npy') 
             rep_list = data[token]
             IDs = []
             reps = []
@@ -233,7 +240,7 @@ class EmbeddingMatcher():
                 IDs.append(tup[0])
                 reps.append(tup[1])
             reps = np.array(reps)
-            inpath = pca_folder + token + \
+            inpath = pca_folder + token_id + \
              '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
             pca = load(inpath)
             reps = pca.transform(reps)
@@ -253,12 +260,12 @@ def main():
     print(subreddit)
     inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
     vocab = set()
-    # TODO: change to only matching words in subreddit's sense vocab & 10_1_filtered
+    # TODO: change to only matching words in subreddit's sense vocab & centroid folder
     with open(LOGS + 'vocabs/tiny_vocab', 'r') as infile: 
         for line in infile: 
             vocab.add(line.strip())
     start = time.time()
-    finetuned = bool(sys.argv[2])
+    finetuned = bool(int(sys.argv[2]))
     if finetuned: 
         print("Finetuned BERT")
         tokenizer = BertTokenizer.from_pretrained(LOGS + 'finetuning/', do_lower_case=True)
