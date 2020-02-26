@@ -62,7 +62,7 @@ class EmbeddingClusterer():
                 line_number += 1
         return sentences
 
-    def get_batches(self, sentences, max_batch): 
+    def get_batches(self, sentences, max_batch):
         # each item in these lists is a sentence
         all_data = [] # indexed tokens, or word IDs
         all_words = [] # tokenized_text, or original words
@@ -70,9 +70,9 @@ class EmbeddingClusterer():
         all_users = []
         for sentence in sentences: 
             marked_text = sentence[1] 
-            tokenized_text = self.tokenizer.tokenize(marked_text)
-            for i in range(0, len(tokenized_text), 510):
-                tokenized_text = tokenized_text[i:i+510]
+            tokenized_text_all = self.tokenizer.tokenize(marked_text)
+            for i in range(0, len(tokenized_text_all), 510):
+                tokenized_text = tokenized_text_all[i:i+510]
                 indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_text)
                 indexed_tokens = self.tokenizer.build_inputs_with_special_tokens(indexed_tokens)
                 all_data.append(indexed_tokens)
@@ -141,7 +141,8 @@ class EmbeddingClusterer():
                     if (token_i + 1) < len(words[sent_i]): 
                         next_w = words[sent_i][token_i+1]
                     if w != word and '##' not in w and '##' not in next_w: continue
-                    if w == word: do_wordpiece = False
+                    if w == word: 
+                        do_wordpiece = False
                     hidden_layers = [] 
                     for layer_i in range(1, 5):
                         vec = encoded_layers[-layer_i][sent_i][token_i]
@@ -182,16 +183,17 @@ class EmbeddingClusterer():
             prev_w = tup
         if ''.join(ongoing_word) == word: 
             data.append(np.mean(ongoing_rep, axis=0).flatten())
-        return np.array(data)
+        np.random.shuffle(data)
+        return np.array(data)[:500]
 
-    def cluster_embeddings(self, data, word, dim_reduct=None, rs=0, lamb=10000, finetuned=False): 
-        assert data.shape[0] >= 500, "Data isn't of size 500 but instead " + str(data.shape[0])
+    def cluster_embeddings(self, data, ID, dim_reduct=None, rs=0, lamb=10000, finetuned=False): 
+        assert data.shape[0] == 500, "Data isn't of size 500 but instead " + str(data.shape[0])
         if dim_reduct is not None:
             if finetuned: 
-                outpath = LOGS + 'finetuned_reddit_pca/' + word + '_' + \
+                outpath = LOGS + 'finetuned_reddit_pca/' + str(ID) + '_' + \
                    str(dim_reduct) + '_' + str(rs) + '.joblib'
             else: 
-                outpath = LOGS + 'reddit_pca/' + word + '_' + \
+                outpath = LOGS + 'reddit_pca/' + str(ID) + '_' + \
                    str(dim_reduct) + '_' + str(rs) + '.joblib'
             pca = PCA(n_components=dim_reduct, random_state=rs)
             data = pca.fit_transform(data)
@@ -218,8 +220,9 @@ def main():
     with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
     ID = d[word]
+    if ID == 0 or ID == 1415: sys.exit(0) # two words we don't have docs for
     doc = LOGS + 'vocabs/docs/' + str(ID)
-    finetuned = bool(sys.argv[2])
+    finetuned = bool(int(sys.argv[2]))
     if finetuned: 
         print("Finetuned BERT-base")
         tokenizer = BertTokenizer.from_pretrained(LOGS + 'finetuning/', do_lower_case=True)
@@ -238,7 +241,7 @@ def main():
     time3 = time.time()
     data = model.group_wordpiece(embeddings, word, do_wordpiece)
     time4 = time.time()
-    centroids = model.cluster_embeddings(data, word, dim_reduct=10, lamb=10000, finetuned=finetuned)
+    centroids = model.cluster_embeddings(data, ID, dim_reduct=10, lamb=10000, finetuned=finetuned)
     if finetuned: 
         np.save(LOGS + 'finetuned_reddit_centroids/' + str(ID) + '.npy', centroids) 
     else: 

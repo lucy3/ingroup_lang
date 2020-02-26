@@ -1,6 +1,6 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=fashion
+#SBATCH --job-name=match
 # Partition:
 #SBATCH --partition=savio2_1080ti
 #
@@ -14,6 +14,9 @@
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
 
-python bert_cluster_match.py fashionreps
+python bert_cluster_match.py fashionreps 0
+
+# time ls ../subreddits_month | parallel 'python bert_cluster_match.py {} 0' & 
+# wait 
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate
