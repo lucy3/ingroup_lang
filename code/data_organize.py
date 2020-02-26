@@ -24,8 +24,8 @@ from transformers import BasicTokenizer, BertTokenizer
 wnl = WordNetLemmatizer()
 
 #ROOT = '/data0/lucy/ingroup_lang/'
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-#ROOT = '/mnt/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'

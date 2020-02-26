@@ -14,7 +14,8 @@ import math
 from nltk.tokenize import word_tokenize
 #from transformers import BasicTokenizer
 
-ROOT = '/data0/lucy/ingroup_lang/'
+#ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 LOG_DIR = ROOT + 'logs/'
 
@@ -102,13 +103,28 @@ def get_vocab_overlap(vocab1_path, vocab2_path):
             contents = line.strip().split(',')
             vocab2.add(contents[0])
     print("OVERLAP between", vocab1_path, vocab2_path, "is:", len(vocab1 & vocab2))
+
+def find_missing_words(): 
+    with open(LOG_DIR + 'vocabs/vocab_map.json', 'r') as infile: 
+        d = json.load(infile)
+    ids = {}
+    for w in d: 
+        ids[d[w]] = w
+    docs = set()
+    for filename in os.listdir(LOG_DIR + 'vocabs/docs/'): 
+        if filename.startswith('.'): continue
+        docs.add(int(filename))
+    diff = set(ids.keys()) - docs
+    for idx in diff: 
+        print("MISSING", idx, ids[idx])
         
 def main(): 
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
     #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
-    get_vocab(0.1, 1)
-    save_sr_vocab(0.1)
+    #get_vocab(0.1, 1)
+    #save_sr_vocab(0.1)
+    find_missing_words()
     sc.stop()
 
 if __name__ == "__main__":
