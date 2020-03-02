@@ -65,12 +65,14 @@ def calculate_pmi():
         data = data.map(lambda tup: (tup[0][1], 1))
         data = data.reduceByKey(lambda n1, n2: n1 + n2) 
         d = Counter(data.collectAsMap())
+        pmi = Counter()
+        for k in d: 
+            pmi[k] = d[k] / float(total_counts[k])
         with open(PMI_DIR + filename + '.csv', 'w') as outfile: 
             writer = csv.writer(outfile)
             writer.writerow(['sense', 'pmi', 'count'])
-            for tup in d.most_common(): 
-                pmi = tup[1] / float(total_counts[tup[0]])
-                writer.writerow([tup[0], str(pmi), str(tup[1])])
+            for tup in pmi.most_common(): 
+                writer.writerow([tup[0], str(tup[1]), str(d[tup[0]])])
     log_file.close()
 
 def main(): 
