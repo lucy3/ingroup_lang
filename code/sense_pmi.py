@@ -1,9 +1,11 @@
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 import os
 import csv
 from collections import Counter
+from io import StringIO
+import tqdm
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/' 
@@ -11,9 +13,9 @@ PMI_DIR = LOG_DIR + '/finetuned_sense_pmi/'
 SENSE_DIR = LOG_DIR + '/finetuned_senses/'
 VOCAB_DIR = LOG_DIR + '/sr_sense_vocab/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -75,10 +77,28 @@ def calculate_pmi():
                 writer.writerow([tup[0], str(tup[1]), str(d[tup[0]])])
     log_file.close()
 
+def inspect_word(word): 
+    '''
+    looks at max sense pmi for different subreddits for one word 
+    '''
+    d = Counter()
+    for filename in tqdm.tqdm(sorted(os.listdir(PMI_DIR))): 
+        scores = []
+        with open(PMI_DIR + filename, 'r') as infile: 
+            reader = csv.DictReader(infile)
+            for row in reader: 
+                if row['sense'].split('#####')[0] == word: 
+                    scores.append(float(row['pmi']))
+        if scores != []: 
+            d[filename.replace('.csv', '')] = max(scores)
+    print(d.most_common())
+
 def main(): 
-    count_overall_senses()
-    calculate_pmi()
-    sc.stop()
+    #count_overall_senses()
+    #calculate_pmi()
+    #inspect_word('fire')
+    inspect_word('ow')
+    #sc.stop()
 
 if __name__ == '__main__':
     main()
