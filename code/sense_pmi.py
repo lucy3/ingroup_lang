@@ -97,7 +97,7 @@ def main():
     #count_overall_senses()
     #calculate_pmi()
     #inspect_word('fire')
-    inspect_word('ow')
+    inspect_word('fry')
     #sc.stop()
 
 if __name__ == '__main__':
