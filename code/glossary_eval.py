@@ -54,7 +54,6 @@ def get_sr2terms():
             if len(tokenizer.tokenize(term)) > 1: continue
             sr2terms[row['subreddit']].append(term)
     return sr2terms
- 
         
 def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0): 
     '''

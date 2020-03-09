@@ -48,10 +48,10 @@ def get_data(sociolect_metric):
     count_cut_off = 0
     if sociolect_metric == 'pmi': 
         path = root + '/logs/pmi/'
-        cut_off = 0.8
+        cut_off = 0.2
     elif sociolect_metric == 'tfidf': 
         path = root + '/logs/tfidf/'
-        cut_off = 5
+        cut_off = 2
     for sr in sorted(feature_dict.keys()): 
         assert len(feature_dict[sr]) == 8
         X.append(feature_dict[sr])
@@ -232,6 +232,7 @@ def main():
     #predict_ols('tfidf')
     u_tests('pmi')
     u_tests('tfidf')
+    #u_tests('sensepmi')
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":

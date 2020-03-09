@@ -1,21 +1,29 @@
-#from pyspark import SparkConf, SparkContext
-#from pyspark.sql import SQLContext
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 import json
 import os
 import csv
-from collections import Counter
+from collections import Counter, defaultdict
 from io import StringIO
 import tqdm
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
-LOG_DIR = ROOT + 'logs/' 
-PMI_DIR = LOG_DIR + '/finetuned_sense_pmi/'
-SENSE_DIR = LOG_DIR + '/finetuned_senses/'
-VOCAB_DIR = LOG_DIR + '/sr_sense_vocab/'
+LOG_DIR = ROOT + 'logs/'
+FT = True
+if FT:  
+    PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
+    MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
+    SENSE_DIR = LOG_DIR + 'finetuned_senses/'
+else:
+    # TODO: change output paths for intermediate files
+    PMI_DIR = LOG_DIR + 'base_sense_pmi/'
+    MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
+    SENSE_DIR = LOG_DIR + 'senses/'
+VOCAB_DIR = LOG_DIR + 'sr_sense_vocab/'
 
-#conf = SparkConf()
-#sc = SparkContext(conf=conf)
-#sqlContext = SQLContext(sc)
+conf = SparkConf()
+sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -92,13 +100,34 @@ def inspect_word(word):
         if scores != []: 
             d[filename.replace('.csv', '')] = max(scores)
     print(d.most_common())
+    
+def calc_max_pmi(): 
+    '''
+    For each file in PMI_DIR, get max sense pmi
+    '''
+    for filename in tqdm.tqdm(sorted(os.listdir(PMI_DIR))): 
+        scores = defaultdict(list) # word : [list of scores]
+        counts = Counter() # word : count
+        with open(PMI_DIR + filename, 'r') as infile: 
+            reader = csv.DictReader(infile)
+            for row in reader: 
+                word = row['sense'].split('#####')[0]
+                scores[word].append(float(row['pmi']))
+                counts[word] += int(row['count'])
+        with open(MAX_PMI_DIR + filename, 'w') as outfile: 
+            writer = csv.writer(outfile)
+            writer.writerow(['word', 'max_pmi', 'count'])
+            for word in scores: 
+                writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    #count_overall_senses()
-    #calculate_pmi()
+    count_overall_senses()
+    calculate_pmi()
     #inspect_word('fire')
-    inspect_word('fry')
-    #sc.stop()
+    #inspect_word('fry')
+    #inspect_word('ow')
+    #calc_max_pmi()
+    sc.stop()
 
 if __name__ == '__main__':
     main()
