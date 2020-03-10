@@ -52,10 +52,15 @@ def get_data(sociolect_metric):
     elif sociolect_metric == 'tfidf': 
         path = root + '/logs/tfidf/'
         cut_off = 2
+    elif sociolect_metric == 'max_pmi': 
+        path = root + 'logs/ft_max_sense_pmi/'
+        cut_off = 0.2
     for sr in sorted(feature_dict.keys()): 
         assert len(feature_dict[sr]) == 8
         X.append(feature_dict[sr])
         f = sr + '_0.2.csv' 
+        if sociolect_metric == 'max_pmi': 
+            f = sr + '.csv'
         df = pd.read_csv(path + f, engine='python')
         notable_words = df[df['count'] > count_cut_off]
         num_words = len(notable_words)
@@ -63,7 +68,9 @@ def get_data(sociolect_metric):
         num_high_val = len(high_val_df)
         score = num_high_val / float(num_words)
         y.append(score)
-        y_bin.append(int(score >= 0.01))
+    median = np.median(y)
+    for score in y: 
+        y_bin.append(int(score >= median))
     X = np.array(X)
     y = np.array(y)
     y_bin = np.array(y_bin)
@@ -230,9 +237,9 @@ def main():
     #predict_sociolects('tfidf')
     #predict_ols('pmi')
     #predict_ols('tfidf')
-    u_tests('pmi')
-    u_tests('tfidf')
-    #u_tests('sensepmi')
+    #u_tests('pmi')
+    #u_tests('tfidf')
+    u_tests('max_pmi')
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":
