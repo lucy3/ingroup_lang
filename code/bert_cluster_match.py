@@ -380,7 +380,6 @@ def main():
     vocab = set()
     with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
-    # TODO: change to only matching words in subreddit's sense vocab & centroid folder
     with open(LOGS + 'sr_sense_vocab/' + subreddit + '_10.0', 'r') as infile: 
         for line in infile: 
             w = line.strip()

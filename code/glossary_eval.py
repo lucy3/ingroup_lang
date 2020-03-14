@@ -17,6 +17,7 @@ SCORE_LOG = ROOT + 'logs/glossary_eval/'
 PMI_PATH = ROOT + 'logs/pmi/'
 TFIDF_PATH = ROOT + 'logs/tfidf/'
 SENSEPMI_PATH = ROOT + 'logs/ft_max_sense_pmi/'
+BASE_SENSEPMI_PATH = ROOT + 'logs/base_max_sense_pmi/'
 
 def basic_stats(): 
     '''
@@ -74,6 +75,9 @@ def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0):
         inpath = PMI_PATH
     elif metric == 'max_pmi': 
         inpath = SENSEPMI_PATH 
+    elif metric == 'max_pmi2': 
+        inpath = BASE_SENSEPMI_PATH
+        metric = 'max_pmi'
     else: 
         raise ValueError("Not implemented yet!")
     rs = []
@@ -151,6 +155,8 @@ def find_best_parameters():
     find_best_parameters_helper(sr2terms, 'pmi', [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, \
                   0.8, 0.9])
     find_best_parameters_helper(sr2terms, 'max_pmi', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
+                   0.6, 0.7, 0.8, 0.9])
+    find_best_parameters_helper(sr2terms, 'max_pmi2', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
                    0.6, 0.7, 0.8, 0.9])
 
 def sense_vocab_coverage(): 
