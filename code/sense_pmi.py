@@ -14,11 +14,13 @@ if FT:
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'finetuned_senses/'
+    ALL_SENSES = LOG_DIR + 'ft_total_sense_counts.json'
 else:
     # TODO: change output paths for intermediate files
     PMI_DIR = LOG_DIR + 'base_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'senses/'
+    ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
 VOCAB_DIR = LOG_DIR + 'sr_sense_vocab/'
 
 conf = SparkConf()
@@ -47,7 +49,7 @@ def count_overall_senses():
         data = data.reduceByKey(lambda n1, n2: n1 + n2)
         d = Counter(data.collectAsMap())
         all_counts += d
-    with open(LOG_DIR + 'total_sense_counts.json', 'w') as outfile: 
+    with open(ALL_SENSES, 'w') as outfile: 
         json.dump(all_counts, outfile)
     log_file.close()
 
@@ -60,7 +62,7 @@ def calculate_pmi():
     3) Calculate PMI
     '''
     log_file = open(LOG_DIR + 'sense_pmi.temp', 'w')
-    with open(LOG_DIR + 'total_sense_counts.json', 'r') as infile: 
+    with open(ALL_SENSES, 'r') as infile: 
         total_counts = json.load(infile)
     for filename in sorted(os.listdir(SENSE_DIR)): 
         log_file.write(filename + '\n') 
@@ -126,7 +128,7 @@ def main():
     #inspect_word('fire')
     #inspect_word('fry')
     #inspect_word('ow')
-    #calc_max_pmi()
+    calc_max_pmi()
     sc.stop()
 
 if __name__ == '__main__':
