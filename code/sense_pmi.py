@@ -1,5 +1,5 @@
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -23,9 +23,9 @@ else:
     ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
 VOCAB_DIR = LOG_DIR + 'sr_sense_vocab/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -123,13 +123,15 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    count_overall_senses()
-    calculate_pmi()
-    #inspect_word('fire')
-    #inspect_word('fry')
-    #inspect_word('ow')
-    calc_max_pmi()
-    sc.stop()
+    #count_overall_senses()
+    #calculate_pmi()
+    inspect_word('fire')
+    inspect_word('fry')
+    inspect_word('ow')
+    inspect_word('')
+    inspect_word('')
+    #calc_max_pmi()
+    #sc.stop()
 
 if __name__ == '__main__':
     main()
