@@ -9,18 +9,22 @@ import tqdm
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-FT = False
-if FT:  
+METRIC = 'denoised'
+if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'finetuned_senses/'
     ALL_SENSES = LOG_DIR + 'ft_total_sense_counts.json'
-else:
-    # TODO: change output paths for intermediate files
+elif METRIC == 'bert-base':
     PMI_DIR = LOG_DIR + 'base_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'senses/'
     ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
+elif METRIC == 'denoised': 
+    PMI_DIR = LOG_DIR + 'denoised_sense_pmi/' 
+    MAX_PMI_DIR = LOG_DIR + 'dn_max_sense_pmi/'
+    SENSE_DIR = LOG_DIR + 'finetuned_senses/'
+    ALL_SENSES = LOG_DIR + 'dn_total_sense_counts.json'
 VOCAB_DIR = LOG_DIR + 'sr_sense_vocab/'
 
 conf = SparkConf()
@@ -32,6 +36,30 @@ def user_sense(line):
     user = contents[0].split('_')[1]
     sense = contents[1] + '#####' + contents[2]
     return ((user, sense), 1) 
+
+def count_overall_senses_denoised(): 
+    '''
+    The bottom fraction only contains counts totals for the top 10 subreddits
+    '''
+    log_file = open(LOG_DIR + 'counting_senses_log.temp', 'w') 
+    all_counts = defaultdict(list) 
+    for filename in sorted(os.listdir(SENSE_DIR)): 
+       log_file.write(filename + '\n') 
+       data = sc.textFile(SENSE_DIR + filename) 
+       data = data.map(user_sense)
+       data = data.reduceByKey(lambda n1, n2: 1)
+       data = data.map(lambda tup: (tup[0][1], 1))
+       data = data.reduceByKey(lambda n1, n2: n1 + n2)
+       d = Counter(data.collectAsMap())
+       for w in d: 
+           all_counts[w].append(d[w])
+    summed_counts = Counter()
+    for w in all_counts: 
+       counts = sum(sorted(all_counts[w], reverse=True)[:10])
+       summed_counts[w] = counts
+    with open(ALL_SENSES, 'w') as outfile: 
+       json.dump(summed_counts, outfile)
+    log_file.close()
 
 def count_overall_senses(): 
     '''
@@ -123,7 +151,10 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    count_overall_senses()
+    if METRIC == 'denoised': 
+        count_overall_senses_denoised()
+    else: 
+        count_overall_senses()
     calculate_pmi()
     #inspect_word('fire')
     #inspect_word('fry')
