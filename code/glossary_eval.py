@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 import numpy as np
 import os 
 from transformers import BasicTokenizer
+import matplotlib.pyplot as plt
 
 ROOT = '/data0/lucy/ingroup_lang/'
 SR_LIST = ROOT + 'data/glossary_list.csv'
@@ -15,6 +16,9 @@ TERMS = ROOT + 'data/glossaries.csv'
 SCORE_LOG = ROOT + 'logs/glossary_eval/'
 PMI_PATH = ROOT + 'logs/pmi/'
 TFIDF_PATH = ROOT + 'logs/tfidf/'
+SENSEPMI_PATH = ROOT + 'logs/ft_max_sense_pmi/'
+BASE_SENSEPMI_PATH = ROOT + 'logs/base_max_sense_pmi/'
+DN_SENSEPMI_PATH = ROOT + 'logs/dn_max_sense_pmi/'
 
 def basic_stats(): 
     '''
@@ -54,7 +58,6 @@ def get_sr2terms():
             if len(tokenizer.tokenize(term)) > 1: continue
             sr2terms[row['subreddit']].append(term)
     return sr2terms
- 
         
 def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0): 
     '''
@@ -71,6 +74,14 @@ def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0):
         inpath = TFIDF_PATH
     elif metric == 'pmi': 
         inpath = PMI_PATH
+    elif metric == 'max_pmi': 
+        inpath = SENSEPMI_PATH 
+    elif metric == 'max_pmi2': 
+        inpath = BASE_SENSEPMI_PATH
+        metric = 'max_pmi'
+    elif metric == 'max_pmi3': 
+        inpath = DN_SENSEPMI_PATH
+        metric = 'max_pmi'
     else: 
         raise ValueError("Not implemented yet!")
     rs = []
@@ -81,8 +92,8 @@ def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0):
     log_file = open(SCORE_LOG + metric + '_' + str(score_cutoff) + '_' + str(count_cutoff), 'w')
     log_file.write("subreddit recall recall2 precision f1\n")
     for subreddit_file in os.listdir(inpath): 
-        if not subreddit_file.endswith('_0.2.csv'): continue
-        subreddit_name = subreddit_file.replace('_0.2.csv', '')
+        if not subreddit_file.endswith('.csv'): continue
+        subreddit_name = subreddit_file.replace('_0.2.csv', '').replace('.csv', '')
         if subreddit_name not in sr2terms: continue
         sociolect_words = set() 
         all_sociolect_words = set()
@@ -126,31 +137,36 @@ def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0):
     print("F1 score:", f)
     return r2, p, f
 
+def find_best_parameters_helper(sr2terms, metric, cutoff_list): 
+    best = None
+    best_score = 0
+    f_list = []
+    for cutoff in cutoff_list: 
+        r, p, f = compute_fscore(sr2terms, metric, cutoff)
+        f_list.append(f)
+        if f > best_score: 
+            best_score = f
+            best = (metric, cutoff, r, p, f)
+    print("BEST PARAMS (metric, cutoff, recall, precision, f1 score):")
+    print(best)
+    plt.scatter(cutoff_list, f_list)
+    plt.savefig(ROOT + 'logs/' + metric+'_glossary_f1.png')
+    plt.close()
+
 def find_best_parameters():
     sr2terms = get_sr2terms() 
-    best = None
-    best_score = 0
-    metric = 'tfidf'
-    for cutoff in [0, 1, 2, 3, 4, 5, 6, 7, 8]: 
-        r, p, f = compute_fscore(sr2terms, metric, cutoff)
-        if f > best_score: 
-            best_score = f
-            best = (metric, cutoff, r, p, f)
-    print("BEST PARAMS (metric, cutoff, recall, precision, f1 score):")
-    print(best)
+    '''
+    find_best_parameters_helper(sr2terms, 'tfidf', [0, 1, 2, 3, 4, 5, 6, 7, 8])
+    find_best_parameters_helper(sr2terms, 'pmi', [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, \
+                  0.8, 0.9])
+    find_best_parameters_helper(sr2terms, 'max_pmi', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
+                   0.6, 0.7, 0.8, 0.9])
+    find_best_parameters_helper(sr2terms, 'max_pmi2', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
+                   0.6, 0.7, 0.8, 0.9])
+    '''
+    find_best_parameters_helper(sr2terms, 'max_pmi3', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
+                   0.6, 0.7, 0.8, 0.9])
 
-    best = None
-    best_score = 0
-    metric = 'pmi'
-    for cutoff in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, \
-                  0.8, 0.9]: 
-        r, p, f = compute_fscore(sr2terms, metric, cutoff)
-        if f > best_score: 
-            best_score = f
-            best = (metric, cutoff, r, p, f)
-    print("BEST PARAMS (metric, cutoff, recall, precision, f1 score):")
-    print(best)
-    
 def sense_vocab_coverage(): 
     sr2terms = get_sr2terms()
     sense_vocab_path = ROOT + 'logs/sr_sense_vocab/'
@@ -177,8 +193,8 @@ def sense_vocab_coverage():
 
 def main(): 
     #basic_stats()
-    #find_best_parameters()
-    sense_vocab_coverage()
+    find_best_parameters()
+    #sense_vocab_coverage()
 
 if __name__ == '__main__':
     main()
