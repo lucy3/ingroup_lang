@@ -220,7 +220,6 @@ def main():
     with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
     ID = d[word]
-    if ID == 0 or ID == 1415: sys.exit(0) # two words we don't have docs for
     doc = LOGS + 'vocabs/docs/' + str(ID)
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 

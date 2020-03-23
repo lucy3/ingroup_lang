@@ -24,8 +24,8 @@ from transformers import BasicTokenizer, BertTokenizer
 wnl = WordNetLemmatizer()
 
 #ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ROOT = '/mnt/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -106,7 +106,6 @@ def get_subreddit_json(line):
         return (comment['subreddit'].lower(), [line])
     else: 
         return (None, [])
-
 
 def count_comments_for_one_subreddit(sr): 
     path = DATA + 'RC_all'
@@ -409,7 +408,7 @@ def get_vocab_word_instances(line, vocab=None):
     ret = []
     union = tokens & set(vocab.keys())
     for w in union: 
-        ret.append((vocab[w], [line]))
+        ret.append((w, [line]))
     if len(union) == 0: 
         ret.append((None, [line]))
     return ret 
@@ -417,17 +416,48 @@ def get_vocab_word_instances(line, vocab=None):
 def sample_vocab_lines(tup): 
     w = tup[0]
     lines = tup[1]
-    try: 
-        instances = random.sample(lines, 500)
-    except ValueError: 
-        print("*****Not enough samples for word:", w)
-        instances = []
-    return (w, instances)
+    sample_num = 25000
+    if w == 'compose': # special case that occurs often
+        sample_num = 300000
+    instances = random.sample(lines, min(sample_num, len(lines)))
+    tokenizer = BasicTokenizer(do_lower_case=True)
+    comment2windows = {} # comment idx to window IDs
+    windowIDs = {} # window list to window ID
+    ID_counts = Counter() # window ID to count
+    for i, inst in enumerate(instances): 
+        lh, _, rh = inst.partition(w)
+        ltokens = tokenizer.tokenize(lh)
+        rtokens = tokenizer.tokenize(rh)
+        ltokens = ltokens[-5:]
+        rtokens = rtokens[:5]
+        window = ltokens + [w] + rtokens
+        if tuple(window) in windowIDs: 
+            windowID = windowIDs[tuple(window)]
+        else: 
+            windowID = i 
+            windowIDs[tuple(window)] = i
+        comment2windows[i] = windowID 
+        ID_counts[windowID] += 1
+    new_instances = []
+    for i, inst in enumerate(instances): 
+        windowID = comment2windows[i]
+        c = ID_counts[windowID]
+        if c < 10: 
+            new_instances.append(inst)
+        if len(new_instances) == 500: break
+    
+    if len(new_instances) < 500 and len(lines) <= 20000: 
+        print("Error: Not enough samples for word:", w)
+        new_instances = []
+    elif len(new_instances) < 500: 
+        print("Error: Need to initially sample more comments for word:", w, len(lines), len(new_instances))
+        new_instances = []
+    return (w, new_instances)
 
-def save_vocab_instances_doc(tup): 
+def save_vocab_instances_doc(tup, vocab=None): 
     w = tup[0]
     lines = tup[1]
-    with open(LOGS + 'vocabs/docs/' + str(w), 'w') as outfile:
+    with open(LOGS + 'vocabs/docs/' + str(vocab[w]), 'w') as outfile:
         for l in lines: 
             outfile.write(l + '\n')
 
@@ -440,10 +470,11 @@ def sample_word_instances():
     vocab = {} 
     with open(vocab_file, 'r') as infile: 
         for i, line in enumerate(infile): 
-            w = line.strip().split(',')[0]
+            w = line.strip()
             vocab[w] = i
     with open(LOGS + 'vocabs/vocab_map.json', 'w') as outfile: 
         json.dump(vocab, outfile)
+    
     rdds = []
     for folder in os.listdir(SR_FOLDER_MONTH): 
         path = SR_FOLDER_MONTH + folder + '/RC_sample'
@@ -452,17 +483,11 @@ def sample_word_instances():
         data = data.flatMap(partial(get_vocab_word_instances, vocab=vocab))
         data = data.filter(lambda tup: tup[0] is not None)
         app = data.reduceByKey(lambda n1, n2: n1 + n2)
-        #data.unpersist()
-        #data = None
-        #sc._jvm.System.gc()
         rdds.append(app)
     all_tups = sc.union(rdds)
     all_tups = all_tups.reduceByKey(lambda n1, n2: n1 + n2)
     sample_tups = all_tups.map(sample_vocab_lines)
-    #all_tups.unpersist()
-    #all_tups = None
-    #sc._jvm.System.gc()
-    sample_tups = sample_tups.foreach(save_vocab_instances_doc)
+    sample_tups = sample_tups.foreach(partial(save_vocab_instances_doc, vocab=vocab))
 
 def tokenizer_check(): 
     path = SR_FOLDER_MONTH + 'askreddit/RC_sample'
