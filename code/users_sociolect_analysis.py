@@ -16,6 +16,9 @@ import statsmodels.api as sm
 from scipy.stats import mannwhitneyu
 import math
 import random
+import csv
+import json
+import tqdm
 root = '/data0/lucy/ingroup_lang/'
 
 def get_values(path, feature_dict): 
@@ -26,7 +29,7 @@ def get_values(path, feature_dict):
             feature_dict[contents[0].lower()].append(float(contents[1]))
     return feature_dict
 
-def get_data(sociolect_metric): 
+def get_features(include_topics=False): 
     feature_dict = defaultdict(list) # subreddit_name : [features]
     feature_names = []
     size_path = root + 'logs/commentor_counts/part-00000-64b1d705-9cf8-4a54-9c4d-598e5bf9085f-c000.csv'
@@ -35,13 +38,73 @@ def get_data(sociolect_metric):
     activity_path = root + 'logs/commentor_activity'
     feature_names.append('user activity')
     feature_dict = get_values(activity_path, feature_dict)
-    for threshold in [0.2, 0.3, 0.4, 0.5, 0.6]: 
+    for threshold in [0.5]: 
         loyalty_path = root + 'logs/commentor_loyalty_'+str(int(threshold*100))
         feature_names.append('user loyalty ' + str(int(threshold*100)))
         feature_dict = get_values(loyalty_path, feature_dict)
     commentor_path = root + 'logs/commentor_density'
     feature_names.append('commentor density')
     feature_dict = get_values(commentor_path, feature_dict)
+    if include_topics: 
+        with open(root + 'logs/topic_assignments.json', 'r') as infile: 
+            topic_assignments = json.load(infile)
+        for sr in topic_assignments: 
+            if topic_assignments[sr] in set(['Hobbies/Occupations', 'Entertainment_TV', 
+                                             'Lifestyle_Technology', 'Entertainment_Sports', 
+                                             'Entertainment_Video games']): 
+                feature_dict[sr].append(1)
+            else: 
+                feature_dict[sr].append(0)
+        feature_names.append('topic')
+    return feature_dict, feature_names
+
+def get_data(sense_cutoff, type_cutoff, include_topics=False):
+    feature_dict, feature_names = get_features(include_topics=include_topics)
+    X = []
+    y = []
+    y_bin = []
+    type_path = root + '/logs/pmi/'
+    sense_path = root + 'logs/ft_max_sense_pmi/'
+    for sr in tqdm.tqdm(sorted(feature_dict.keys())): 
+        X.append(feature_dict[sr])
+        sense_scores = defaultdict(float)
+        vocab_size = 0
+        sociolect_count = 0
+        with open(sense_path + sr + '.csv', 'r') as infile:
+            reader = csv.DictReader(infile)
+            for row in reader: 
+                w = row['word']
+                score = float(row['max_pmi'])
+                sense_scores[w] = score
+        with open(type_path + sr + '_0.2.csv', 'r') as infile:
+            reader = csv.DictReader(infile)
+            for row in reader: 
+                w = row['word']
+                score = float(row['pmi'])
+                vocab_size += 1
+                if score > type_cutoff or sense_scores[w] > sense_cutoff:  
+                    sociolect_count += 1
+        y.append(sociolect_count / float(vocab_size))
+    median = np.median(y)
+    for score in y: 
+        y_bin.append(int(score >= median))
+    X = np.array(X)
+    y = np.array(y)
+    y_bin = np.array(y_bin)
+    assert X.shape[0] == y.shape[0]
+    # z-score the columns
+    X = zscore(X, axis=0)
+    return X, y, y_bin, feature_names
+
+def get_data_old(sociolect_metric): 
+    '''
+    Returns: 
+        X - each column is a user feature, each row is an example
+        y - sociolect-y score, or fraction of terms above a cut off
+        y_bin - 
+        feature_names
+    '''
+    feature_dict, feature_names = get_features()
     X = []
     y = []
     y_bin = []
@@ -135,9 +198,15 @@ def predict_sociolects(sociolect_metric):
     print("--------------------------")
     print
 
-def predict_ols(sociolect_metric): 
-    X, y, y_bin, feature_names = get_data(sociolect_metric)
-    model = sm.OLS(y, X)
+def predict_ols(sociolect_metric=None): 
+    if sociolect_metric is None:
+        sense_cutoff = 0.043227665706051875
+        type_cutoff = 0.288888888889
+        X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, include_topics=True)
+    else:
+        X, y, y_bin, feature_names = get_data(sociolect_metric)
+    X_1 = sm.add_constant(X)
+    model = sm.OLS(y, X_1)
     results = model.fit()
     print(feature_names)
     print(results.summary())
@@ -153,16 +222,32 @@ def run_u_test(name, col, X, y_bin, alternative):
     res = mannwhitneyu(x, y, alternative=alternative)
     print(res)
     
-def u_tests(sociolect_metric): 
+def u_tests(sociolect_metric=None): 
     '''
     less sociolect-y communities are larger, less active, less loyal, less dense
     '''
-    print(sociolect_metric)
-    X, y, y_bin, feature_names = get_data(sociolect_metric)
-    run_u_test('community size', feature_names.index('community size'), X, y_bin, 'greater')
-    run_u_test('user activity', feature_names.index('user activity'), X, y_bin, 'less')
-    run_u_test('user loyalty 50', feature_names.index('user loyalty 50'), X, y_bin, 'less')
-    run_u_test('commentor density', feature_names.index('commentor density'), X, y_bin, 'less')
+    # values copied from "senses" Python Notebook
+    #scs = [0.0036087605774016924, 0.004476418864908073, 0.005788712011577424, 0.008141112618724558, 0.013975155279503106, 0.043227665706051875, 0.06841158708963413]
+    #tcs = [0.00253788161529, 0.00322909585316, 0.00436090225564, 0.006768908251974008, 0.0161290322581, 0.288888888889, 0.690909090909]
+    scs = [0.043227665706051875, 0.06841158708963413] 
+    tcs = [0.288888888889, 0.690909090909]
+    if sociolect_metric is None: 
+        for i in range(len(scs)): 
+            print("Combined type and sense U-tests")
+            sense_cutoff = scs[i]
+            type_cutoff = tcs[i]
+            X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff)
+            run_u_test('community size', feature_names.index('community size'), X, y_bin, 'greater')
+            run_u_test('user activity', feature_names.index('user activity'), X, y_bin, 'less')
+            run_u_test('user loyalty 50', feature_names.index('user loyalty 50'), X, y_bin, 'less')
+            run_u_test('commentor density', feature_names.index('commentor density'), X, y_bin, 'less')
+    else:
+        print(sociolect_metric)
+        X, y, y_bin, feature_names = get_data_old(sociolect_metric)
+        run_u_test('community size', feature_names.index('community size'), X, y_bin, 'greater')
+        run_u_test('user activity', feature_names.index('user activity'), X, y_bin, 'less')
+        run_u_test('user loyalty 50', feature_names.index('user loyalty 50'), X, y_bin, 'less')
+        run_u_test('commentor density', feature_names.index('commentor density'), X, y_bin, 'less')
     
 def matching_subreddits(feature, matching_features, sociolect_metric): 
     '''
@@ -239,7 +324,9 @@ def main():
     #predict_ols('tfidf')
     #u_tests('pmi')
     #u_tests('tfidf')
-    u_tests('max_pmi')
+    #u_tests('max_pmi')
+    #u_tests()
+    predict_ols()
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":

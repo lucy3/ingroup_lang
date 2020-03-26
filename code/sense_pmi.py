@@ -6,10 +6,11 @@ import csv
 from collections import Counter, defaultdict
 from io import StringIO
 import tqdm
+import numpy as np
 
 ROOT = '/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'bert-base'
+METRIC = 'finetuned'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -152,6 +153,8 @@ def inspect_word(word, subreddit=None):
             if scores != []: 
                 d[filename.replace('.csv', '')] = max(scores)
         print(d.most_common())
+        print(np.mean(d.values()))
+        print(np.var(d.values()))
     
 def calc_max_pmi(): 
     '''
@@ -179,16 +182,17 @@ def main():
     #    count_overall_senses()
     #calculate_pmi()
     
-    inspect_word('cubes', 'azurelane')
-    inspect_word('hesitation', 'sekiro')
-    inspect_word('granted', 'themonkeyspaw')
-    inspect_word('hunters', 'borderlands')
-    inspect_word('island', 'loveislandtv')
-    inspect_word('monk', 'sekiro')
-    inspect_word('labs', 'crashbandicoot')
-    inspect_word('gb', 'forhonor')
-    inspect_word('abundance', 'edh')
-    inspect_word('tags', 'music') 
+    inspect_word('fry', 'aquariums') 
+    #inspect_word('cubes', 'azurelane')
+    #inspect_word('hesitation', 'sekiro')
+    #inspect_word('granted', 'themonkeyspaw')
+    #inspect_word('hunters', 'borderlands')
+    #inspect_word('island', 'loveislandtv')
+    #inspect_word('monk', 'sekiro')
+    #inspect_word('labs', 'crashbandicoot')
+    #inspect_word('gb', 'forhonor')
+    #inspect_word('abundance', 'edh')
+    #inspect_word('tags', 'music') 
     
     #calc_max_pmi()
     #sc.stop()
