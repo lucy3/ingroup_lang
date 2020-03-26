@@ -12,7 +12,7 @@ import random
 from collections import defaultdict
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ALL_VEC_FOLDER = ROOT + 'logs/entire_sr_vectors/'
+VEC_FOLDER = ROOT + 'logs/senses_viz/'
 LOGS = ROOT + 'logs/'
 
 #conf = SparkConf()
@@ -78,7 +78,7 @@ def sanity_check():
     ax.legend(handles=legend_elements)
     plt.savefig('../logs/bert_sanity_check_' + subreddit + '.png')
 
-def compare_word_across_subreddits(subreddit_list, word): 
+def compare_word_across_subreddits(subreddit_list, word, finetuned=False): 
     '''
     This implementation assumes that we saved individual files
     for each word and each subreddit (since we don't want to
@@ -86,17 +86,22 @@ def compare_word_across_subreddits(subreddit_list, word):
     for some visualization)
     '''
     marker_options = ['o', 'v', 'X', 's', 'D', '<', 'P', '*', '^', '>']
-    color_options = ['tab:blue', 'tab:orange', 'tab:green', 
-         'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 
-         'tab:gray', 'tab:olive', 'tab:cyan']
+    #color_options = ['tab:blue', 'tab:orange', 'tab:green', 
+    #     'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 
+    #     'tab:gray', 'tab:olive', 'tab:cyan']
+    color_options = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
     srs = defaultdict(list) # subreddit name : indices
     sense_colors = []
     X = []
     j = 0
     for sr in subreddit_list: 
-        sense_path = LOGS + 'senses/' + sr
+        sense_path = VEC_FOLDER + sr + '_' + str(finetuned)
         with open(sense_path, 'r') as infile: 
-            for line in infile: 
+            for line in infile:
+                # speeds up visualization if we only visualize a sample  
+                if random.choice(range(4)) != 0: continue  
                 contents = line.strip().split('\t') 
                 w = contents[1]
                 if word != w: continue
@@ -112,15 +117,24 @@ def compare_word_across_subreddits(subreddit_list, word):
     legend_elements = [] 
     for i, sr in enumerate(subreddit_list): 
         idx = srs[sr]
-        colors = [color_options[k] for k in sense_colors[idx]]
-        # can put c=colors if we want to color by sense 
         # can put c=color_options[i] if we want to color by subreddit        
         ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=color_options[i], \
-            marker='.', alpha=0.5)
+               marker='.', alpha=0.5)
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label=sr, 
                                    markerfacecolor=color_options[i], markersize=10))
-    ax.legend(handles=legend_elements)
-    plt.savefig('../logs/bert_reddit_' + word + '.png') 
+    ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5,-0.1), ncol=3)
+    plt.savefig('../logs/bert_reddit_' + word + '_subreddits.png', bbox_inches="tight")
+    plt.close()
+    fig, ax = plt.subplots()
+    for i, sr in enumerate(subreddit_list): 
+        idx = srs[sr]
+        colors = [color_options[k] for k in sense_colors[idx]]
+        ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=colors, \
+               marker='.', alpha=0.5) 
+        # can put c=colors if we want to color by sense 
+    plt.savefig('../logs/bert_reddit_' + word + '_senses.png', bbox_inches="tight")
+    plt.close()
+     
 
 def compare_word_across_subreddits_old(subreddit_list, word): 
     '''
@@ -288,7 +302,10 @@ def main():
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters20_0')
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0')
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0_normalize') 
-    compare_word_across_subreddits(['advice', 'keto', 'books', 'fitness', 'fashionreps'], 'fit')
+    #compare_word_across_subreddits(['cooking', 'food', 
+    #     'aquariums', 'thebachelor'], 'fry', finetuned=True)
+    compare_word_across_subreddits(['boxoffice', 'overwatch', 
+         'competitiveoverwatch', 'repsneakers', 'sneakers', 'fashionreps'], 'ow', finetuned=True)
     #sc.stop()
 
 if __name__ == '__main__': 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=red1
+#SBATCH --job-name=reddit1
 # Partition:
 #SBATCH --partition=savio2_1080ti
 #
@@ -10,6 +10,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
+#SBATCH --mail-user=lucy3_li@berkeley.edu
+#SBATCH --mail-type=all
 
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
