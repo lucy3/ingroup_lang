@@ -33,7 +33,7 @@ from joblib import dump, load
 from sklearn.preprocessing import StandardScaler
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-LOGS = ROOT + 'logs/'
+LOGS = ROOT + 'logs2/'
 
 batch_size=32
 dropout_rate=0.25
