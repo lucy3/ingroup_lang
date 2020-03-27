@@ -85,7 +85,7 @@ def compare_word_across_subreddits(subreddit_list, word, finetuned=False):
     waste time saving every vector, only ones we care about
     for some visualization)
     '''
-    marker_options = ['o', 'v', 'X', 's', 'D', '<', 'P', '*', '^', '>']
+    marker_options = ['o', 's', 's', 'D', 'D', 'D', 'P', '*', '^', '>']
     #color_options = ['tab:blue', 'tab:orange', 'tab:green', 
     #     'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 
     #     'tab:gray', 'tab:olive', 'tab:cyan']
@@ -112,18 +112,19 @@ def compare_word_across_subreddits(subreddit_list, word, finetuned=False):
                 j += 1
     sense_colors = np.array(sense_colors) 
     X = np.array(X)
-    X_embedded = TSNE(n_components=2, n_jobs=-1).fit_transform(X)
+    X_embedded = TSNE(n_components=2, n_jobs=-1, random_state=0).fit_transform(X)
     fig, ax = plt.subplots()
     legend_elements = [] 
     for i, sr in enumerate(subreddit_list): 
         idx = srs[sr]
         # can put c=color_options[i] if we want to color by subreddit        
         ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=color_options[i], \
-               marker='.', alpha=0.5)
+               marker='.', alpha=0.5, s=10, linewidths=0)
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label=sr, 
                                    markerfacecolor=color_options[i], markersize=10))
     ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5,-0.1), ncol=3)
-    plt.savefig('../logs/bert_reddit_' + word + '_subreddits.png', bbox_inches="tight")
+    plt.savefig('../logs/bert_reddit_' + word + '_subreddits_' + str(finetuned) + '.png', 
+        bbox_inches="tight", dpi=300)
     plt.close()
     fig, ax = plt.subplots()
     for i, sr in enumerate(subreddit_list): 
@@ -132,7 +133,8 @@ def compare_word_across_subreddits(subreddit_list, word, finetuned=False):
         ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=colors, \
                marker='.', alpha=0.5) 
         # can put c=colors if we want to color by sense 
-    plt.savefig('../logs/bert_reddit_' + word + '_senses.png', bbox_inches="tight")
+    plt.savefig('../logs/bert_reddit_' + word + '_senses_' + str(finetuned) + '.png', 
+        bbox_inches="tight")
     plt.close()
      
 
@@ -304,8 +306,12 @@ def main():
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0_normalize') 
     #compare_word_across_subreddits(['cooking', 'food', 
     #     'aquariums', 'thebachelor'], 'fry', finetuned=True)
-    compare_word_across_subreddits(['boxoffice', 'overwatch', 
-         'competitiveoverwatch', 'repsneakers', 'sneakers', 'fashionreps'], 'ow', finetuned=True)
+    #compare_word_across_subreddits(['boxoffice', 'overwatch', 
+    #     'competitiveoverwatch', 'repsneakers', 'sneakers', 'fashionreps'], 'ow', finetuned=True)
+    compare_word_across_subreddits(['borderlands', 'swgalaxyofheroes', 'reddeadredemption', 
+       'reddeadonline', 'starwars', 'starwars'], 'hunters', finetuned=True)
+    compare_word_across_subreddits(['borderlands', 'sekiro', 'boardgames', 
+       'thedivision', 'destinythegame'], 'hunters', finetuned=False)
     #sc.stop()
 
 if __name__ == '__main__': 

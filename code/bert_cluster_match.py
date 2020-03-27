@@ -382,7 +382,7 @@ def main():
     with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
     vocab = set(d.keys())
-    vocab = set(['ow']) # TODO delete
+    vocab = set(['hunters']) # TODO delete
     start = time.time()
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 
@@ -403,7 +403,7 @@ def main():
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
     model.get_embeddings_and_match(subreddit, batched_data, batched_words, batched_masks, 
-        batched_users, centroids_d, pca_d, finetuned=finetuned, viz=True)
+        batched_users, centroids_d, pca_d, finetuned=finetuned, viz=True) # TODO change
     time3 = time.time()
     print("TOTAL TIME:", time3 - time2) 
     
