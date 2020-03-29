@@ -7,8 +7,8 @@ from collections import Counter, defaultdict
 from io import StringIO
 import tqdm
 
-ROOT = '/data0/lucy/ingroup_lang/'
-LOG_DIR = ROOT + 'logs/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
+LOG_DIR = ROOT + 'logs2/'
 METRIC = 'bert-base'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
@@ -173,24 +173,24 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    #if METRIC == 'denoised': 
-    #    count_overall_senses_denoised()
-    #else: 
-    #    count_overall_senses()
-    #calculate_pmi()
+    if METRIC == 'denoised': 
+        count_overall_senses_denoised()
+    else: 
+        count_overall_senses()
+    calculate_pmi()
     
-    inspect_word('cubes', 'azurelane')
-    inspect_word('hesitation', 'sekiro')
-    inspect_word('granted', 'themonkeyspaw')
-    inspect_word('hunters', 'borderlands')
-    inspect_word('island', 'loveislandtv')
-    inspect_word('monk', 'sekiro')
-    inspect_word('labs', 'crashbandicoot')
-    inspect_word('gb', 'forhonor')
-    inspect_word('abundance', 'edh')
-    inspect_word('tags', 'music') 
+    #inspect_word('cubes', 'azurelane')
+    #inspect_word('hesitation', 'sekiro')
+    #inspect_word('granted', 'themonkeyspaw')
+    #inspect_word('hunters', 'borderlands')
+    #inspect_word('island', 'loveislandtv')
+    #inspect_word('monk', 'sekiro')
+    #inspect_word('labs', 'crashbandicoot')
+    #inspect_word('gb', 'forhonor')
+    #inspect_word('abundance', 'edh')
+    #inspect_word('tags', 'music') 
     
-    #calc_max_pmi()
+    calc_max_pmi()
     #sc.stop()
 
 if __name__ == '__main__':
