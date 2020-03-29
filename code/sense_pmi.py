@@ -6,6 +6,7 @@ import csv
 from collections import Counter, defaultdict
 from io import StringIO
 import tqdm
+import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs2/'
@@ -152,6 +153,8 @@ def inspect_word(word, subreddit=None):
             if scores != []: 
                 d[filename.replace('.csv', '')] = max(scores)
         print(d.most_common())
+        print(np.mean(d.values()))
+        print(np.var(d.values()))
     
 def calc_max_pmi(): 
     '''

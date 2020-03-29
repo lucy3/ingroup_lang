@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=tsne
-#SBATCH --partition=savio2
+#SBATCH --partition=savio
 #SBATCH --time=10:00:00
 #SBATCH --nodes=1
 module load java

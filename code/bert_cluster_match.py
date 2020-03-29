@@ -33,7 +33,7 @@ from joblib import dump, load
 from sklearn.preprocessing import StandardScaler
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-LOGS = ROOT + 'logs/'
+LOGS = ROOT + 'logs2/'
 
 batch_size=32
 dropout_rate=0.25
@@ -183,6 +183,8 @@ class EmbeddingMatcher():
             outfile = open(LOGS + 'finetuned_senses/' + subreddit, 'w')
         else: 
             outfile = open(LOGS + 'senses/' + subreddit, 'w')
+        if viz: 
+            outfile = open(LOGS + 'senses_viz/' + subreddit + '_' + str(finetuned), 'w') 
         vocab = set(centroids_d.keys())
         ret = [] 
         print("Getting embeddings for batched_data of length", len(batched_data))
@@ -377,14 +379,9 @@ def main():
     subreddit = sys.argv[1]
     print(subreddit)
     inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
-    vocab = set()
     with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
-    with open(LOGS + 'sr_sense_vocab/' + subreddit + '_10.0', 'r') as infile: 
-        for line in infile: 
-            w = line.strip()
-            if w in d: 
-                vocab.add(w)
+    vocab = set(d.keys())
     start = time.time()
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 
@@ -405,7 +402,7 @@ def main():
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
     model.get_embeddings_and_match(subreddit, batched_data, batched_words, batched_masks, 
-        batched_users, centroids_d, pca_d, finetuned=finetuned)
+        batched_users, centroids_d, pca_d, finetuned=finetuned) 
     time3 = time.time()
     print("TOTAL TIME:", time3 - time2) 
     
