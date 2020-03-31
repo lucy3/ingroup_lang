@@ -1,36 +1,40 @@
-#from pyspark import SparkConf, SparkContext
-#from pyspark.sql import SQLContext
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 import json
 import os
 import csv
+import math
 from collections import Counter, defaultdict
 from io import StringIO
 import tqdm
 import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
-LOG_DIR = ROOT + 'logs2/'
-METRIC = 'bert-base'
+LOG_DIR = ROOT + 'logs/'
+METRIC = 'finetuned'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'finetuned_senses/'
     ALL_SENSES = LOG_DIR + 'ft_total_sense_counts.json'
+    SUB_TOTALS = LOG_DIR + 'ft_sr_totals.json'
 elif METRIC == 'bert-base':
     PMI_DIR = LOG_DIR + 'base_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'senses/'
     ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
+    SUB_TOTALS = LOG_DIR + 'base_sr_totals.json'
 elif METRIC == 'denoised': 
     PMI_DIR = LOG_DIR + 'denoised_sense_pmi/' 
     MAX_PMI_DIR = LOG_DIR + 'dn_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'finetuned_senses/'
     ALL_SENSES = LOG_DIR + 'dn_total_sense_counts.json'
-VOCAB_DIR = LOG_DIR + 'sr_sense_vocab/'
+    SUB_TOTALS = LOG_DIR + 'dn_sr_totals.json'
+VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-#conf = SparkConf()
-#sc = SparkContext(conf=conf)
-#sqlContext = SQLContext(sc)
+conf = SparkConf()
+sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -69,6 +73,7 @@ def count_overall_senses():
     '''
     log_file = open(LOG_DIR + 'counting_senses_log.temp', 'w') 
     all_counts = Counter()
+    subreddit_totals = Counter()
     for filename in sorted(os.listdir(SENSE_DIR)):
         log_file.write(filename + '\n') 
         data = sc.textFile(SENSE_DIR + filename) 
@@ -77,15 +82,17 @@ def count_overall_senses():
         data = data.map(lambda tup: (tup[0][1], 1))
         data = data.reduceByKey(lambda n1, n2: n1 + n2)
         d = Counter(data.collectAsMap())
+        subreddit_totals[filename] = sum(list(d.values()))
         all_counts += d
+    with open(SUB_TOTALS, 'w') as outfile: 
+        json.dump(subreddit_totals, outfile)
     with open(ALL_SENSES, 'w') as outfile: 
         json.dump(all_counts, outfile)
     log_file.close()
 
 def calculate_pmi(): 
     '''
-    PMI is defined as 
-    frequency of sense in community c / frequency of sense in all communities
+    PMI
     1) For each subreddit, filter to top 10% of words in that subreddit 
     2) Count each sense once per user per subreddit
     3) Calculate PMI
@@ -93,6 +100,9 @@ def calculate_pmi():
     log_file = open(LOG_DIR + 'sense_pmi.temp', 'w')
     with open(ALL_SENSES, 'r') as infile: 
         total_counts = json.load(infile)
+    overall_total = sum(list(total_counts.values()))
+    with open(SUB_TOTALS, 'r') as infile: 
+        subreddit_totals = json.load(infile)
     for filename in sorted(os.listdir(SENSE_DIR)): 
         log_file.write(filename + '\n') 
         data = sc.textFile(SENSE_DIR + filename)
@@ -107,8 +117,10 @@ def calculate_pmi():
         data = data.reduceByKey(lambda n1, n2: n1 + n2) 
         d = Counter(data.collectAsMap())
         pmi = Counter()
-        for k in d: 
-            pmi[k] = d[k] / float(total_counts[k])
+        for k in d:
+            p_k_given_c = d[k] / float(subreddit_totals[filename])
+            p_k = total_counts[k] / float(overall_total)
+            pmi[k] = math.log(p_k_given_c / p_k)
         with open(PMI_DIR + filename + '.csv', 'w') as outfile: 
             writer = csv.writer(outfile)
             writer.writerow(['sense', 'pmi', 'count'])
@@ -194,7 +206,7 @@ def main():
     #inspect_word('tags', 'music') 
     
     calc_max_pmi()
-    #sc.stop()
+    sc.stop()
 
 if __name__ == '__main__':
     main()
