@@ -1,4 +1,5 @@
 # get word counts in each subreddit 
+# Python 2.7
 import os
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
@@ -70,13 +71,18 @@ def calculate_pmi(percent_param=0.2):
     PMI is defined as 
     log(p(word|community) / p(word)) 
     or 
-    log(frequency of word in community c / frequency of word in 
-    all c's we are looking at)
+    log of 
+    (frequency of word in community c / # of words in community c) 
+    ______________________________________________________________ 
+    (frequency of word in all c's / total number of words)
+
     as defined in Zhang et al. 2017.
     """
     log_file = open(LOG_DIR + 'pmi.temp', 'w')
     with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
         total_counts = json.load(infile)
+    with open(LOG_DIR + 'total_word_count.txt', 'r') as infile: 
+        overall_total = int(infile.readline())
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         pmi_d = {}
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
@@ -84,8 +90,11 @@ def calculate_pmi(percent_param=0.2):
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
             num_top_p = int(percent_param*len(d))
+            total_c = sum(list(d.values()))
             for w in d.most_common(num_top_p): 
-                pmi_d[w[0]] = d[w[0]] / float(total_counts[w[0]])
+                p_w_given_c = d[w[0]] / float(total_c)
+                p_w = total_counts[w[0]] / float(overall_total)
+                pmi_d[w[0]] = math.log(p_w_given_c / p_w)
             new_filename = filename.replace('.txt', '')
             with open(PMI_DIR + new_filename + '_' + str(percent_param) + '.csv', 'w') as outfile: 
                 sorted_d = sorted(pmi_d.items(), key=operator.itemgetter(1))
@@ -100,14 +109,18 @@ def count_overall_words(percent_param=0.2):
     vocab = set()
     log_file = open(LOG_DIR + 'counting_all_log.temp', 'w') 
     log_file.write("Getting vocab...\n")
+    overall_total = 0 
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
             log_file.write(filename + '\n') 
             parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
             d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+            overall_total += sum(list(d.values()))
             num_top_p = int(percent_param*len(d))
             for w in d.most_common(num_top_p): 
                 vocab.add(w[0])
+    with open(LOG_DIR + 'total_word_count.txt', 'w') as outfile: 
+        outfile.write(str(overall_total))
     log_file.write("Vocab size:" + str(len(vocab)) + "\n")
     all_counts = Counter()
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
@@ -187,11 +200,11 @@ def word_tfidf(percent_param=0.2):
     log_file.close()
 
 def main(): 
-    count_words()
+    #count_words()
     count_overall_words()
     calculate_pmi()
-    count_document_freq()
-    word_tfidf()
+    #count_document_freq()
+    #word_tfidf()
     sc.stop()
 
 if __name__ == '__main__':
