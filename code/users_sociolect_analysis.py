@@ -51,7 +51,7 @@ def get_features(include_topics=False):
         for sr in topic_assignments: 
             if topic_assignments[sr] in set(['Hobbies/Occupations', 'Entertainment_TV', 
                                              'Lifestyle_Technology', 'Entertainment_Sports', 
-                                             'Entertainment_Video games']): 
+                                             'Entertainment_Video games', 'Other']): 
                 feature_dict[sr].append(1)
             else: 
                 feature_dict[sr].append(0)
@@ -111,15 +111,14 @@ def get_data_old(sociolect_metric):
     count_cut_off = 0
     if sociolect_metric == 'pmi': 
         path = root + '/logs/pmi/'
-        cut_off = 0.2
+        cut_off = 5.0088
     elif sociolect_metric == 'tfidf': 
         path = root + '/logs/tfidf/'
-        cut_off = 2
+        cut_off = 3.0826
     elif sociolect_metric == 'max_pmi': 
         path = root + 'logs/ft_max_sense_pmi/'
-        cut_off = 0.2
+        cut_off = 3.0380
     for sr in sorted(feature_dict.keys()): 
-        assert len(feature_dict[sr]) == 8
         X.append(feature_dict[sr])
         f = sr + '_0.2.csv' 
         if sociolect_metric == 'max_pmi': 
@@ -227,10 +226,10 @@ def u_tests(sociolect_metric=None):
     less sociolect-y communities are larger, less active, less loyal, less dense
     '''
     # values copied from "senses" Python Notebook
-    #scs = [0.0036087605774016924, 0.004476418864908073, 0.005788712011577424, 0.008141112618724558, 0.013975155279503106, 0.043227665706051875, 0.06841158708963413]
-    #tcs = [0.00253788161529, 0.00322909585316, 0.00436090225564, 0.006768908251974008, 0.0161290322581, 0.288888888889, 0.690909090909]
-    scs = [0.043227665706051875, 0.06841158708963413] 
-    tcs = [0.288888888889, 0.690909090909]
+    #scs = [0.5007301153953705, 0.7039233649614907, 0.953026733779678, 1.2910247870623466, 1.8434940980468622, 3.038046754473495, 3.520420472064922]
+    #tcs = [0.143621134298, 0.3674494252902001, 0.6634994838245996, 1.1110732048100005, 2.0168260770319986, 5.008815935891599, 5.884734049733797]
+    scs = [3.038046754473495] 
+    tcs = [5.008815935891599]
     if sociolect_metric is None: 
         for i in range(len(scs)): 
             print("Combined type and sense U-tests")
@@ -322,11 +321,11 @@ def main():
     #predict_sociolects('tfidf')
     #predict_ols('pmi')
     #predict_ols('tfidf')
-    #u_tests('pmi')
+    u_tests('pmi')
     #u_tests('tfidf')
-    #u_tests('max_pmi')
+    u_tests('max_pmi')
     #u_tests()
-    predict_ols()
+    #predict_ols()
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":

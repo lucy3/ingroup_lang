@@ -1,5 +1,5 @@
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -9,9 +9,9 @@ from io import StringIO
 import tqdm
 import numpy as np
 
-ROOT = '/mnt/data0/lucy/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'finetuned'
+METRIC = 'bert-base'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -32,9 +32,9 @@ elif METRIC == 'denoised':
     SUB_TOTALS = LOG_DIR + 'dn_sr_totals.json'
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -188,25 +188,25 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    if METRIC == 'denoised': 
-        count_overall_senses_denoised()
-    else: 
-        count_overall_senses()
-    calculate_pmi()
+    #if METRIC == 'denoised': 
+    #    count_overall_senses_denoised()
+    #else: 
+    #    count_overall_senses()
+    #calculate_pmi()
     
-    #inspect_word('cubes', 'azurelane')
-    #inspect_word('hesitation', 'sekiro')
-    #inspect_word('granted', 'themonkeyspaw')
-    #inspect_word('hunters', 'borderlands')
-    #inspect_word('island', 'loveislandtv')
-    #inspect_word('monk', 'sekiro')
-    #inspect_word('labs', 'crashbandicoot')
-    #inspect_word('gb', 'forhonor')
-    #inspect_word('abundance', 'edh')
-    #inspect_word('tags', 'music') 
+    inspect_word('&', 'transcribersofreddit')
+    inspect_word('&', 'thathappened')
+    inspect_word('usa', 'livestreamfail')
+    inspect_word('er', 'trees')
+    inspect_word('&', 'me_irl')
+    inspect_word('nope', 'transcribersofreddit')
+    inspect_word('damn', 'counting')
+    inspect_word('_', 'stlouisblues')
+    inspect_word('bees', 'comedyheaven')
+    inspect_word('fabric', 'jailbreak') 
     
-    calc_max_pmi()
-    sc.stop()
+    #calc_max_pmi()
+    #sc.stop()
 
 if __name__ == '__main__':
     main()
