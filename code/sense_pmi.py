@@ -17,13 +17,13 @@ if METRIC == 'finetuned':
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'finetuned_senses/'
     ALL_SENSES = LOG_DIR + 'ft_total_sense_counts.json'
-    SUB_TOTALS = LOG_DIR + 'ft_sr_totals.json'
+    SUB_TOTALS = LOG_DIR + 'ft_sr_totals.json' 
 elif METRIC == 'bert-base':
     PMI_DIR = LOG_DIR + 'base_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'senses/'
     ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
-    SUB_TOTALS = LOG_DIR + 'base_sr_totals.json'
+    SUB_TOTALS = LOG_DIR + 'base_sr_totals.json' 
 elif METRIC == 'denoised': 
     PMI_DIR = LOG_DIR + 'denoised_sense_pmi/' 
     MAX_PMI_DIR = LOG_DIR + 'dn_max_sense_pmi/'
@@ -103,6 +103,7 @@ def calculate_pmi():
     overall_total = sum(list(total_counts.values()))
     with open(SUB_TOTALS, 'r') as infile: 
         subreddit_totals = json.load(infile)
+    log_file.write("ARE THEY EQUAL " + str(overall_total2 == overall_total) + '\n')
     for filename in sorted(os.listdir(SENSE_DIR)): 
         log_file.write(filename + '\n') 
         data = sc.textFile(SENSE_DIR + filename)
