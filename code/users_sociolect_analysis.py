@@ -29,7 +29,7 @@ def get_values(path, feature_dict):
             feature_dict[contents[0].lower()].append(float(contents[1]))
     return feature_dict
 
-def get_features(include_topics=False): 
+def get_features(include_topics=False, factor_topics=False): 
     feature_dict = defaultdict(list) # subreddit_name : [features]
     feature_names = []
     size_path = root + 'logs/commentor_counts/part-00000-64b1d705-9cf8-4a54-9c4d-598e5bf9085f-c000.csv'
@@ -45,21 +45,33 @@ def get_features(include_topics=False):
     commentor_path = root + 'logs/commentor_density'
     feature_names.append('commentor density')
     feature_dict = get_values(commentor_path, feature_dict)
+    topic_list = ['Discussion', 'Humor', 'Entertainment_Sports', 
+                  'Lifestyle_Technology', 'Lifestyle_Relationships/Sex', 
+                  'Other_Geography', 'Entertainment_Internet/Apps', 'Other_Cringe', 
+                  'Other_Disgusting/Angering/Scary/Weird', 'Entertainment_TV', 
+                  'Entertainment_Video games', 'Hobbies/Occupations']
     if include_topics: 
         with open(root + 'logs/topic_assignments.json', 'r') as infile: 
             topic_assignments = json.load(infile)
         for sr in topic_assignments: 
-            if topic_assignments[sr] in set(['Hobbies/Occupations', 'Entertainment_TV', 
-                                             'Lifestyle_Technology', 'Entertainment_Sports', 
-                                             'Entertainment_Video games', 'Other']): 
-                feature_dict[sr].append(1)
+            if factor_topics: 
+                topic_feats = [0 for i in range(len(topic_list))]
+                if topic_assignments[sr] != 'Other': 
+                    topic_feats[topic_list.index(topic_assignments[sr])] = 1
+                feature_dict[sr].extend(topic_feats)
             else: 
-                feature_dict[sr].append(0)
+                if topic_assignments[sr] in set(['Hobbies/Occupations', 'Entertainment_TV', 
+                                                 'Lifestyle_Technology', 'Entertainment_Sports', 
+                                                 'Entertainment_Video games', 'Other']): 
+                    feature_dict[sr].append(1)
+                else: 
+                    feature_dict[sr].append(0)
         feature_names.append('topic')
     return feature_dict, feature_names
 
-def get_data(sense_cutoff, type_cutoff, include_topics=False):
-    feature_dict, feature_names = get_features(include_topics=include_topics)
+def get_data(sense_cutoff, type_cutoff, include_topics=False, factor_topics=False):
+    feature_dict, feature_names = get_features(include_topics=include_topics, 
+                                               factor_topics=factor_topics)
     X = []
     y = []
     y_bin = []
@@ -199,9 +211,9 @@ def predict_sociolects(sociolect_metric):
 
 def predict_ols(sociolect_metric=None): 
     if sociolect_metric is None:
-        sense_cutoff = 0.043227665706051875
-        type_cutoff = 0.288888888889
-        X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, include_topics=True)
+        sense_cutoff = 3.038046754473495
+        type_cutoff = 5.008815935891599
+        X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, include_topics=True, factor_topics=True)
     else:
         X, y, y_bin, feature_names = get_data(sociolect_metric)
     X_1 = sm.add_constant(X)
@@ -321,11 +333,11 @@ def main():
     #predict_sociolects('tfidf')
     #predict_ols('pmi')
     #predict_ols('tfidf')
-    u_tests('pmi')
+    #u_tests('pmi')
     #u_tests('tfidf')
-    u_tests('max_pmi')
+    #u_tests('max_pmi')
     #u_tests()
-    #predict_ols()
+    predict_ols()
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":
