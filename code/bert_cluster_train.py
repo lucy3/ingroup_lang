@@ -32,8 +32,10 @@ import os.path
 from joblib import dump, load
 from sklearn.preprocessing import StandardScaler
 
+SEED = 0
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-LOGS = ROOT + 'logs2/'
+LOGS = ROOT + 'logs/'
+INPUT_LOGS = ROOT + 'logs/'
 
 batch_size=32
 dropout_rate=0.25
@@ -186,7 +188,7 @@ class EmbeddingClusterer():
         np.random.shuffle(data)
         return np.array(data)[:500]
 
-    def cluster_embeddings(self, data, ID, dim_reduct=None, rs=0, lamb=10000, finetuned=False): 
+    def cluster_embeddings(self, data, ID, dim_reduct=None, rs=SEED, lamb=10000, finetuned=False): 
         assert data.shape[0] == 500, "Data isn't of size 500 but instead " + str(data.shape[0])
         if dim_reduct is not None:
             if finetuned: 
@@ -217,15 +219,15 @@ class EmbeddingClusterer():
 def main(): 
     word = sys.argv[1]
     print("WORD:", word)
-    with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
+    with open(INPUT_LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
     ID = d[word]
-    doc = LOGS + 'vocabs/docs/' + str(ID)
+    doc = INPUT_LOGS + 'vocabs/docs/' + str(ID)
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 
         print("Finetuned BERT-base")
-        tokenizer = BertTokenizer.from_pretrained(LOGS + 'finetuning/', do_lower_case=True)
-        model_name = BertModel.from_pretrained(LOGS + 'finetuning/', output_hidden_states=True) 
+        tokenizer = BertTokenizer.from_pretrained(INPUT_LOGS + 'finetuning/', do_lower_case=True)
+        model_name = BertModel.from_pretrained(INPUT_LOGS + 'finetuning/', output_hidden_states=True) 
     else: 
         print("BERT-base")
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
