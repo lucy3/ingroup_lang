@@ -29,7 +29,7 @@ def get_values(path, feature_dict):
             feature_dict[contents[0].lower()].append(float(contents[1]))
     return feature_dict
 
-def get_features(include_topics=False): 
+def get_features(include_topics=False, factor_topics=False): 
     feature_dict = defaultdict(list) # subreddit_name : [features]
     feature_names = []
     size_path = root + 'logs/commentor_counts/part-00000-64b1d705-9cf8-4a54-9c4d-598e5bf9085f-c000.csv'
@@ -45,21 +45,33 @@ def get_features(include_topics=False):
     commentor_path = root + 'logs/commentor_density'
     feature_names.append('commentor density')
     feature_dict = get_values(commentor_path, feature_dict)
+    topic_list = ['Discussion', 'Humor', 'Entertainment_Sports', 
+                  'Lifestyle_Technology', 'Lifestyle_Relationships/Sex', 
+                  'Other_Geography', 'Entertainment_Internet/Apps', 'Other_Cringe', 
+                  'Other_Disgusting/Angering/Scary/Weird', 'Entertainment_TV', 
+                  'Entertainment_Video games', 'Hobbies/Occupations']
     if include_topics: 
         with open(root + 'logs/topic_assignments.json', 'r') as infile: 
             topic_assignments = json.load(infile)
         for sr in topic_assignments: 
-            if topic_assignments[sr] in set(['Hobbies/Occupations', 'Entertainment_TV', 
-                                             'Lifestyle_Technology', 'Entertainment_Sports', 
-                                             'Entertainment_Video games']): 
-                feature_dict[sr].append(1)
+            if factor_topics: 
+                topic_feats = [0 for i in range(len(topic_list))]
+                if topic_assignments[sr] != 'Other': 
+                    topic_feats[topic_list.index(topic_assignments[sr])] = 1
+                feature_dict[sr].extend(topic_feats)
             else: 
-                feature_dict[sr].append(0)
+                if topic_assignments[sr] in set(['Hobbies/Occupations', 'Entertainment_TV', 
+                                                 'Lifestyle_Technology', 'Entertainment_Sports', 
+                                                 'Entertainment_Video games', 'Other']): 
+                    feature_dict[sr].append(1)
+                else: 
+                    feature_dict[sr].append(0)
         feature_names.append('topic')
     return feature_dict, feature_names
 
-def get_data(sense_cutoff, type_cutoff, include_topics=False):
-    feature_dict, feature_names = get_features(include_topics=include_topics)
+def get_data(sense_cutoff, type_cutoff, include_topics=False, factor_topics=False):
+    feature_dict, feature_names = get_features(include_topics=include_topics, 
+                                               factor_topics=factor_topics)
     X = []
     y = []
     y_bin = []
@@ -111,15 +123,14 @@ def get_data_old(sociolect_metric):
     count_cut_off = 0
     if sociolect_metric == 'pmi': 
         path = root + '/logs/pmi/'
-        cut_off = 0.2
+        cut_off = 5.0088
     elif sociolect_metric == 'tfidf': 
         path = root + '/logs/tfidf/'
-        cut_off = 2
+        cut_off = 3.0826
     elif sociolect_metric == 'max_pmi': 
         path = root + 'logs/ft_max_sense_pmi/'
-        cut_off = 0.2
+        cut_off = 3.0380
     for sr in sorted(feature_dict.keys()): 
-        assert len(feature_dict[sr]) == 8
         X.append(feature_dict[sr])
         f = sr + '_0.2.csv' 
         if sociolect_metric == 'max_pmi': 
@@ -200,9 +211,9 @@ def predict_sociolects(sociolect_metric):
 
 def predict_ols(sociolect_metric=None): 
     if sociolect_metric is None:
-        sense_cutoff = 0.043227665706051875
-        type_cutoff = 0.288888888889
-        X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, include_topics=True)
+        sense_cutoff = 3.038046754473495
+        type_cutoff = 5.008815935891599
+        X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, include_topics=True, factor_topics=True)
     else:
         X, y, y_bin, feature_names = get_data(sociolect_metric)
     X_1 = sm.add_constant(X)
@@ -227,10 +238,10 @@ def u_tests(sociolect_metric=None):
     less sociolect-y communities are larger, less active, less loyal, less dense
     '''
     # values copied from "senses" Python Notebook
-    #scs = [0.0036087605774016924, 0.004476418864908073, 0.005788712011577424, 0.008141112618724558, 0.013975155279503106, 0.043227665706051875, 0.06841158708963413]
-    #tcs = [0.00253788161529, 0.00322909585316, 0.00436090225564, 0.006768908251974008, 0.0161290322581, 0.288888888889, 0.690909090909]
-    scs = [0.043227665706051875, 0.06841158708963413] 
-    tcs = [0.288888888889, 0.690909090909]
+    #scs = [0.5007301153953705, 0.7039233649614907, 0.953026733779678, 1.2910247870623466, 1.8434940980468622, 3.038046754473495, 3.520420472064922]
+    #tcs = [0.143621134298, 0.3674494252902001, 0.6634994838245996, 1.1110732048100005, 2.0168260770319986, 5.008815935891599, 5.884734049733797]
+    scs = [3.038046754473495] 
+    tcs = [5.008815935891599]
     if sociolect_metric is None: 
         for i in range(len(scs)): 
             print("Combined type and sense U-tests")

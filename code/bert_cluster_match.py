@@ -32,8 +32,10 @@ import os.path
 from joblib import dump, load
 from sklearn.preprocessing import StandardScaler
 
+SEED = 0
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-LOGS = ROOT + 'logs2/'
+LOGS = ROOT + 'logs/'
+INPUT_LOGS = ROOT + 'logs/'
 
 batch_size=32
 dropout_rate=0.25
@@ -135,7 +137,7 @@ class EmbeddingMatcher():
                 current_batch = 6
         return batched_data, batched_words, batched_masks, batched_users
 
-    def load_centroids(self, subreddit, vocab, d, dim_reduct=10, rs=0, finetuned=False): 
+    def load_centroids(self, subreddit, vocab, d, dim_reduct=10, rs=SEED, finetuned=False): 
         if finetuned: 
             centroids_folder = LOGS + 'finetuned_reddit_centroids/' 
             pca_folder = LOGS + 'finetuned_reddit_pca/' 
@@ -336,7 +338,7 @@ class EmbeddingMatcher():
                 data[tok].append((prev_w[1], rep)) 
         return data
 
-    def match_embeddings(self, data, vocab, subreddit, d, viz=False, dim_reduct=10, rs=0, finetuned=False): 
+    def match_embeddings(self, data, vocab, subreddit, d, viz=False, dim_reduct=10, rs=SEED, finetuned=False): 
         '''
         for each word and its reps, load centroid and match 
         output: line#_user\tword\tcentroid#\n in a subreddit-specific file
@@ -379,21 +381,21 @@ def main():
     subreddit = sys.argv[1]
     print(subreddit)
     inputfile = ROOT + 'subreddits_month/' + subreddit + '/RC_sample'
-    with open(LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
+    with open(INPUT_LOGS + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
     vocab = set(d.keys())
     start = time.time()
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 
         print("Finetuned BERT")
-        tokenizer = BertTokenizer.from_pretrained(LOGS + 'finetuning/', do_lower_case=True)
-        model_name = BertModel.from_pretrained(LOGS + 'finetuning/', output_hidden_states=True) 
+        tokenizer = BertTokenizer.from_pretrained(INPUT_LOGS + 'finetuning/', do_lower_case=True)
+        model_name = BertModel.from_pretrained(INPUT_LOGS + 'finetuning/', output_hidden_states=True) 
     else: 
         print("BERT-base")
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         model_name = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
     model = EmbeddingMatcher(tokenizer, model_name)
-    centroids_d, pca_d = model.load_centroids(subreddit, vocab, d, dim_reduct=10, rs=0, finetuned=finetuned)
+    centroids_d, pca_d = model.load_centroids(subreddit, vocab, d, dim_reduct=10, rs=SEED, finetuned=finetuned)
     vocab = set(centroids_d.keys())
     sentences = model.read_sentences(inputfile) 
     time1 = time.time()

@@ -9,9 +9,9 @@ from io import StringIO
 import tqdm
 import numpy as np
 
-ROOT = '/mnt/data0/lucy/ingroup_lang/'
+ROOT = '/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'finetuned'
+METRIC = 'bert-base'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -212,9 +212,9 @@ def main():
     inspect_word('pm')
     inspect_word('associates')
     inspect_word('spark')
-    
+
     #calc_max_pmi()
-    sc.stop()
+    #sc.stop()
 
 if __name__ == '__main__':
     main()
