@@ -1,5 +1,5 @@
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -32,9 +32,9 @@ elif METRIC == 'denoised':
     SUB_TOTALS = LOG_DIR + 'dn_sr_totals.json'
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -166,8 +166,8 @@ def inspect_word(word, subreddit=None):
             if scores != []: 
                 d[filename.replace('.csv', '')] = max(scores)
         print(d.most_common())
-        print(np.mean(d.values()))
-        print(np.var(d.values()))
+        print(np.mean(list(d.values())))
+        print(np.var(list(d.values())))
     
 def calc_max_pmi(): 
     '''
@@ -189,10 +189,12 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
+    '''
     if METRIC == 'denoised': 
         count_overall_senses_denoised()
     else: 
         count_overall_senses()
+    '''
     #calculate_pmi()
     
     #inspect_word('cubes', 'azurelane')
@@ -205,6 +207,11 @@ def main():
     #inspect_word('gb', 'forhonor')
     #inspect_word('abundance', 'edh')
     #inspect_word('tags', 'music') 
+    inspect_word('bowls')
+    inspect_word('curry')
+    inspect_word('pm')
+    inspect_word('associates')
+    inspect_word('spark')
     
     #calc_max_pmi()
     sc.stop()
