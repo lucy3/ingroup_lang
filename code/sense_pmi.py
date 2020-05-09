@@ -166,8 +166,8 @@ def inspect_word(word, subreddit=None):
             if scores != []: 
                 d[filename.replace('.csv', '')] = max(scores)
         print(d.most_common())
-        print(np.mean(d.values()))
-        print(np.var(d.values()))
+        print(np.mean(list(d.values())))
+        print(np.var(list(d.values())))
     
 def calc_max_pmi(): 
     '''
@@ -189,23 +189,30 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    #if METRIC == 'denoised': 
-    #    count_overall_senses_denoised()
-    #else: 
-    #    count_overall_senses()
+    '''
+    if METRIC == 'denoised': 
+        count_overall_senses_denoised()
+    else: 
+        count_overall_senses()
+    '''
     #calculate_pmi()
     
-    #inspect_word('&', 'transcribersofreddit')
-    #inspect_word('&', 'thathappened')
-    #inspect_word('usa', 'livestreamfail')
-    #inspect_word('er', 'trees')
-    #inspect_word('&', 'me_irl')
-    #inspect_word('nope', 'transcribersofreddit')
-    #inspect_word('damn', 'counting')
-    #inspect_word('_', 'stlouisblues')
-    #inspect_word('bees', 'comedyheaven')
-    #inspect_word('fabric', 'jailbreak') 
-    inspect_word('omg', 'weddingplanning')
+    #inspect_word('cubes', 'azurelane')
+    #inspect_word('hesitation', 'sekiro')
+    #inspect_word('granted', 'themonkeyspaw')
+    #inspect_word('hunters', 'borderlands')
+    #inspect_word('island', 'loveislandtv')
+    #inspect_word('monk', 'sekiro')
+    #inspect_word('labs', 'crashbandicoot')
+    #inspect_word('gb', 'forhonor')
+    #inspect_word('abundance', 'edh')
+    #inspect_word('tags', 'music') 
+    inspect_word('bowls')
+    inspect_word('curry')
+    inspect_word('pm')
+    inspect_word('associates')
+    inspect_word('spark')
+
     #calc_max_pmi()
     #sc.stop()
 
