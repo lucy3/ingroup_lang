@@ -11,7 +11,7 @@ import csv
 import math
 
 #ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/' 
 PMI_DIR = ROOT + 'logs/pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
@@ -200,11 +200,11 @@ def word_tfidf(percent_param=0.2):
     log_file.close()
 
 def main(): 
-    #count_words()
+    count_words()
     count_overall_words()
     calculate_pmi()
-    #count_document_freq()
-    #word_tfidf()
+    count_document_freq()
+    word_tfidf()
     sc.stop()
 
 if __name__ == '__main__':

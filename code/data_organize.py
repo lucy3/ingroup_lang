@@ -19,13 +19,15 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from functools import partial
 from nltk.stem import WordNetLemmatizer
 from transformers import BasicTokenizer, BertTokenizer
+from glossary_eval import get_sr2terms
+import numpy as np
 #from stanfordnlp.server import CoreNLPClient
 
 wnl = WordNetLemmatizer()
 
 #ROOT = '/data0/lucy/ingroup_lang/'
-ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-#ROOT = '/mnt/data0/lucy/ingroup_lang/'
+#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -367,6 +369,26 @@ def prep_finetuning():
     test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test2')
     train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train2')
 
+def est_finetuning_gloss_cov(): 
+    """
+    For words in subreddit glossaries, calculate how many times
+    they appear in the finetuning input 
+    """
+    data = sc.textFile(LOGS + 'finetune_input_train2')
+    sr2terms = get_sr2terms()
+    terms = set()
+    for sr in sr2terms: 
+        terms.update(sr2terms[sr])
+    tokenizer = BasicTokenizer(do_lower_case=True) 
+    data = data.flatMap(lambda line: list(set(tokenizer.tokenize(line)) & terms))
+    data = data.map(lambda w: (w, 1))
+    data = data.reduceByKey(lambda n1, n2: n1 + n2)
+    data = data.collectAsMap()
+    gloss_examples = Counter(data)
+    avg = sum(gloss_examples.values()) / len(gloss_examples)
+    print("------RESULT median # of examples per gloss word:", np.median(list(gloss_examples.values())))
+    print("------RESULT avg # of examples per gloss word:", avg)
+
 def temp(): 
     for i in range(100): 
         data = sc.textFile(SR_FOLDER_MONTH + 'askreddit/RC_sample') 
@@ -534,8 +556,9 @@ def main():
     #filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
-    sample_word_instances()
+    #sample_word_instances()
     #tokenizer_check()
+    est_finetuning_gloss_cov()
     sc.stop()
 
 if __name__ == '__main__':

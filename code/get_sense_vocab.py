@@ -12,7 +12,6 @@ import re, string
 import csv
 import math
 import numpy as np
-from nltk.tokenize import word_tokenize
 #from transformers import BasicTokenizer
 
 #ROOT = '/data0/lucy/ingroup_lang/'
@@ -142,7 +141,7 @@ def main():
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
     #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
-    #get_vocab(0.1, 1)
+    get_vocab(0.1, 1)
     #save_sr_vocab(0.1)
     #find_missing_words()
     #approximate_num_matches()

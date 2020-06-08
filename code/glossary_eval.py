@@ -10,7 +10,7 @@ import os
 from transformers import BasicTokenizer
 import matplotlib.pyplot as plt
 
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 SR_LIST = ROOT + 'data/glossary_list.csv'
 TERMS = ROOT + 'data/glossaries.csv'
 SCORE_LOG = ROOT + 'logs/glossary_eval/'
@@ -27,6 +27,7 @@ def basic_stats():
     Check that all subreddits with links have glossary standardized terms
     and that subreddit names match up in these files. 
     '''
+    tokenizer = BasicTokenizer(do_lower_case=True)
     sr_list = []
     with open(SR_LIST, 'r') as infile: 
         reader = csv.DictReader(infile, delimiter=',')
@@ -36,16 +37,27 @@ def basic_stats():
     sr_list = sorted(sr_list)
     sr_set = set()
     sr_count = Counter()
+    mwe_count = Counter()
+    total_terms = 0
     with open(TERMS, 'r') as infile: 
         reader = csv.DictReader(infile, delimiter=',')
         for row in reader:
+            total_terms += 1
             sr_set.add(row['subreddit'].strip())
             sr_count[row['subreddit']] += 1
+            term = row['term'].strip().lower()
+            term_len = len(tokenizer.tokenize(term))
+            if term_len > 1: 
+                mwe_count[term_len] += 1
     assert sorted(sr_list) == sorted(sr_set)
     print("Number of subreddits:", len(sr_set))
-    print("Average number of terms per subreddit:", np.mean(sr_count.values()))
-    print("Min number of terms:", np.min(sr_count.values()))
-    print("Max number of terms:", np.max(sr_count.values()))
+    print("Average number of terms per subreddit:", np.mean(list(sr_count.values())))
+    print("Min number of terms:", np.min(list(sr_count.values())))
+    print("Max number of terms:", np.max(list(sr_count.values())))
+    print("Total number of terms:", total_terms)
+    print("Total number of mwes:", sum(list(mwe_count.values())))
+    for term_len in sorted(mwe_count.keys()): 
+        print(term_len, mwe_count[term_len])
 
 def get_sr2terms(): 
     tokenizer = BasicTokenizer(do_lower_case=True)
@@ -192,8 +204,8 @@ def sense_vocab_coverage():
     print("AVERAGE # OF TERMS IN VOCAB:", np.mean(coverage))
 
 def main(): 
-    #basic_stats()
-    find_best_parameters()
+    basic_stats()
+    #find_best_parameters()
     #sense_vocab_coverage()
 
 if __name__ == '__main__':
