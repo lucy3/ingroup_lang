@@ -101,7 +101,7 @@ def calculate_pmi(percent_param=0.2):
                 writer = csv.writer(outfile)
                 writer.writerow(['word', 'pmi', 'count'])
                 for tup in sorted_d: 
-                    writer.writerow([tup[0].encode('utf-8', 'replace'), str(tup[1]), str(d[tup[0]])])
+                    writer.writerow([tup[0], str(tup[1]), str(d[tup[0]])])
     log_file.write("DONE\n")
     log_file.close()
     
@@ -195,15 +195,15 @@ def word_tfidf(percent_param=0.2):
                 writer = csv.writer(outfile)
                 writer.writerow(['word', 'tfidf', 'count'])
                 for tup in sorted_d: 
-                    writer.writerow([tup[0].encode('utf-8', 'replace'), str(tup[1]), str(d[tup[0]])])
+                    writer.writerow([tup[0], str(tup[1]), str(d[tup[0]])])
     log_file.write("DONE\n")
     log_file.close()
 
 def main(): 
-    count_words()
-    count_overall_words()
+    #count_words()
+    #count_overall_words()
     calculate_pmi()
-    count_document_freq()
+    #count_document_freq()
     word_tfidf()
     sc.stop()
 

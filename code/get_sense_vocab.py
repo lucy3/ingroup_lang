@@ -36,12 +36,13 @@ def save_sr_vocab(percent_param):
             num_top_p = int(percent_param*len(d))
             with open(output_path, 'w') as outfile: 
                 for w in d.most_common(num_top_p): 
-                    outfile.write(w[0].encode('utf-8', 'replace') + '\n')
+                    outfile.write(w[0] + '\n')
 
 
 def get_vocab(percent_param, N):
     '''
-    This function is python 2.7 unfortunately
+    Get words in top percent_param of subreddits
+    that appear in at least N subreddits 
     '''
     vocab_map = defaultdict(list) # word : [subreddit]
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
@@ -69,7 +70,7 @@ def get_vocab(percent_param, N):
             all_counts += d
     with open(LOG_DIR + 'vocabs/' + str(int(percent_param*100)) + '_' + str(N), 'w') as outfile:
         for w in vocab: 
-            outfile.write(w.encode('utf-8', 'replace') + ',' + str(all_counts[w]) + \
+            outfile.write(w + ',' + str(all_counts[w]) + \
                          ',' + str(vocab_subreddits[w]) + '\n')
             
 def comments_with_vocab(vocab_file): 
@@ -92,6 +93,11 @@ def comments_with_vocab(vocab_file):
     print("NUMBER OF COMMENTS WITH VOCAB WORDS:", sum(d.values()))
     
 def get_vocab_overlap(vocab1_path, vocab2_path):
+    '''
+    This function was used during preliminary experiments
+    to understand the amount of overlap between different vocabs
+    formed using different parameters. 
+    '''
     vocab1 = set()
     vocab2 = set()
     with open(vocab1_path, 'r') as infile: 
@@ -141,8 +147,8 @@ def main():
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
     #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
     #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
-    get_vocab(0.1, 1)
-    #save_sr_vocab(0.1)
+    #get_vocab(0.1, 1)
+    save_sr_vocab(0.1)
     #find_missing_words()
     #approximate_num_matches()
     sc.stop()
