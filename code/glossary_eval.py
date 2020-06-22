@@ -15,6 +15,7 @@ import json
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 SR_LIST = ROOT + 'data/glossary_list.csv'
 TERMS = ROOT + 'data/glossaries.csv'
+WEBPAGES = ROOT + 'data/glossaries/'
 SCORE_LOG = ROOT + 'logs/glossary_eval/'
 PMI_PATH = ROOT + 'logs/pmi/'
 TFIDF_PATH = ROOT + 'logs/tfidf/'
@@ -76,7 +77,7 @@ def get_sr2terms_no_mwes():
             sr2terms[row['subreddit']].append(term)
     return sr2terms
 
-def get_sr2terms(): 
+def get_sr2terms_original(): 
     sr2terms = defaultdict(list)
     with open(TERMS, 'r') as infile: 
         reader = csv.DictReader(infile, delimiter=',')
@@ -84,6 +85,11 @@ def get_sr2terms():
             term = row['term'].strip().lower()
             sr2terms[row['subreddit']].append(term)
     return sr2terms
+
+def get_sr2terms(): 
+    with open(ROOT + 'logs/existing_gloss_terms.json', 'r') as infile: 
+        exist_gloss_terms = json.load(infile)
+    return exist_gloss_terms 
         
 def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0): 
     '''
@@ -222,7 +228,7 @@ def count_exact_string_matches():
     Get glossary terms that actually
     show up in their subreddit based on exact string matches
     """
-    sr2terms = get_sr2terms()
+    sr2terms = get_sr2terms_original()
     # count it for each subreddit
     existing_terms = defaultdict(set) # sr : set of terms that show up
     num_mwe = 0 
@@ -246,7 +252,7 @@ def count_exact_string_matches():
 def compare_gloss_dicts(): 
     with open(ROOT + 'logs/existing_gloss_terms.json', 'r') as infile: 
         exist_gloss_terms = json.load(infile)
-    sr2terms = get_sr2terms()
+    sr2terms = get_sr2terms_original()
     existing_count = 0
     all_count = 0
     for sr in sr2terms: 
@@ -257,13 +263,36 @@ def compare_gloss_dicts():
         print(sr, len(all_t - exist), all_t - exist)
     print("Number of words in our evaluation:", existing_count)
     print("Total number of glossary words:", all_count)
+    
+def sanity_check_gloss_words(): 
+    '''
+    Check that the glossary words 
+    appear on the subreddit glossary html pages
+    '''
+    sr2terms = get_sr2terms_original()
+    for sr in sr2terms: 
+        if sr == 'boxoffice': 
+            with open(WEBPAGES + sr + '1', 'r') as infile: 
+                contents = infile.read().lower()
+            with open(WEBPAGES + sr + '2', 'r') as infile: 
+                contents += '\n' + infile.read().lower()
+        elif sr == 'me_irl': # typo, was corrected later
+            with open(WEBPAGES + 'mechanicalkeyboards', 'r') as infile: 
+                contents = infile.read().lower()
+        else:
+            with open(WEBPAGES + sr, 'r') as infile: 
+                contents = infile.read().lower()
+        for term in sr2terms[sr]: 
+            if term not in contents: 
+                print(sr, term)
 
 def main(): 
     #basic_stats()
     #find_best_parameters()
     #sense_vocab_coverage()
-    #count_exact_string_matches()
+    count_exact_string_matches()
     compare_gloss_dicts()
+    #sanity_check_gloss_words()
 
 if __name__ == '__main__':
     main()

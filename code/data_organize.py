@@ -13,6 +13,7 @@ import re
 import string
 import os
 from pyspark import SparkConf, SparkContext
+from pyspark.sql import Row, SQLContext
 from collections import Counter
 import random
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -38,6 +39,7 @@ REMOVED_SRS = DATA + 'non_english_sr.txt'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
 reddits = set()
 
 def clean_up_text(text): 
@@ -352,9 +354,10 @@ def filter_ukwac():
     for lemma in counts: 
         print(lemma, counts[lemma])
 
-def prep_finetuning(): 
+def prep_finetuning_old(): 
     """
     Remove usernames, concatenate files together
+    This was for use with Huggingface's run_lm_finetuning.py. 
     """
     rdds = []
     for folder in os.listdir(SR_FOLDER_MONTH): 
@@ -368,6 +371,47 @@ def prep_finetuning():
     train = sc.parallelize(train.takeSample(False, 10000000, 0))
     test.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_test2')
     train.coalesce(1).saveAsTextFile(LOGS + 'finetune_input_train2')
+    
+def prep_finetuning_part1(): 
+    """
+    Output: a parquet where each cell is a comment 
+    """
+    rdds = []
+    for folder in os.listdir(SR_FOLDER_MONTH): 
+        path = SR_FOLDER_MONTH + folder + '/RC_sample'
+        data = sc.textFile(path)
+        data = data.filter(lambda line: not line.startswith('USER1USER0USER') and line.strip() != "")
+        rdds.append(data)
+    all_data = sc.union(rdds)
+    test, train = all_data.randomSplit(weights=[0.1, 0.9], seed=1)
+    test = test.map(lambda line: Row(comment=line))
+    test_df = sqlContext.createDataFrame(test)
+    test_df.write.mode('overwrite').parquet(LOGS + "finetune_input_test3/test.parquet")
+    train = train.map(lambda line: Row(comment=line))
+    train_df = sqlContext.createDataFrame(train)
+    train_df.write.mode('overwrite').parquet(LOGS + "finetune_input_train3/train.parquet")
+    
+def prep_finetuning_part2():
+    """
+    Input: a parquet where each cell is a list of sentences and
+    each cell is a single comment (or document)
+    Output: a document where one sentence per line, 
+    with documents separate by an additional newline.
+    """
+    test_df = sqlContext.read.parquet(LOGS + "finetune_input_test3/ssplit_test.parquet")
+    test_num_sent = sum(test_df.rdd.map(lambda row: len(row.sen)).collect())
+    #test_num_tokens = sum(test_df.rdd.map(lambda row: row.num_tokens).collect())
+    test = test_df.rdd.map(lambda row: '\n'.join(row.sen) + '\n')
+    test.saveAsTextFile(LOGS + 'finetune_input_test3/test')
+    train_df = sqlContext.read.parquet(LOGS + "finetune_input_train3/ssplit_train.parquet")
+    train_num_sent = sum(train_df.rdd.map(lambda row: len(row.sen)).collect())
+    #train_num_tokens = sum(test_df.rdd.map(lambda row: row.num_tokens).collect())
+    train = train_df.rdd.map(lambda row: '\n'.join(row.sen) + '\n')
+    train.saveAsTextFile(LOGS + 'finetune_input_train3/train')
+    print("---Number of sentences in test set:", test_num_sent)
+    #print("---Number of tokens in test set:", test_num_tokens)
+    print("---Number of sentences in train set:", train_num_sent)
+    #print("---Number of tokens in train set:", train_num_tokens)
 
 def est_finetuning_gloss_cov(): 
     """
@@ -552,13 +596,14 @@ def main():
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    #prep_finetuning()
+    #prep_finetuning_part1()
+    prep_finetuning_part2()
     #filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
     #sample_word_instances()
     #tokenizer_check()
-    est_finetuning_gloss_cov()
+    #est_finetuning_gloss_cov()
     sc.stop()
 
 if __name__ == '__main__':

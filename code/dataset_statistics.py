@@ -5,7 +5,7 @@ import numpy as np
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from pyspark import SparkConf, SparkContext
-from transformers import BertTokenizer
+from transformers import BertTokenizer, BasicTokenizer
 from pyspark.sql import SQLContext
 import math
 import json
@@ -14,7 +14,7 @@ conf = SparkConf()
 sc = SparkContext(conf=conf)
 sqlContext = SQLContext(sc)
 
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
 LOGS = ROOT + 'logs/'
 
@@ -34,6 +34,16 @@ def get_comment_length():
         d += output
     with open(LOGS + 'comment_lengths.json', 'w') as outfile: 
         json.dump(d, outfile)
+
+def get_num_tokens(): 
+    d = 0
+    tokenizer = BasicTokenizer(do_lower_case=True)
+    for sr in os.listdir(SR_FOLDER_MONTH):
+        data = sc.textFile(SR_FOLDER_MONTH + sr + '/RC_sample')
+        data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
+        data = data.map(lambda line: len(tokenizer.tokenize(line)))
+        d += sum(data.collect())
+    print("Total number of tokens:", d)
     
 def count_comments(): 
     comment_count = Counter()
@@ -54,8 +64,9 @@ def count_comments():
             outfile.write(tup[0] + '\t' + str(tup[1]) + '\t' + str(user_count[tup[0]]) + '\n')
 
 def main(): 
-    get_comment_length()
+    #get_comment_length()
     #count_comments()
+    get_num_tokens()
     sc.stop()
 
 if __name__ == "__main__":
