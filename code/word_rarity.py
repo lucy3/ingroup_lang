@@ -200,10 +200,10 @@ def word_tfidf(percent_param=0.2):
     log_file.close()
 
 def main(): 
-    #count_words()
-    #count_overall_words()
+    count_words()
+    count_overall_words()
     calculate_pmi()
-    #count_document_freq()
+    count_document_freq()
     word_tfidf()
     sc.stop()
 
