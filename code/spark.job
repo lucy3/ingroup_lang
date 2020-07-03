@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vocab_docs
 #SBATCH --partition=savio2_bigmem
+#SBATCH --account=fc_dbamman
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
 #SBATCH --mail-user=lucy3_li@berkeley.edu

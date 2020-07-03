@@ -1,9 +1,10 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=run2
+#SBATCH --job-name=run_b1
 # Partition:
 #SBATCH --partition=savio2_1080ti
 #
+#SBATCH --account=fc_dbamman
 # Wall clock limit:
 #SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
@@ -16,12 +17,12 @@
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
 
-#time awk -F "," '{print $1}' ../logs/vocabs/xaa | parallel 'python bert_cluster_train.py {} 0' &
-#wait
+time awk -F "," '{print $1}' ../logs/vocabs/xaa | parallel 'python bert_cluster_train.py {} 0' &
+wait
 
-python bert_cluster_train.py cubes 0
-python bert_cluster_train.py cubes 1
-python bert_cluster_train.py hunters 0 
-python bert_cluster_train.py hunters 1
+#python bert_cluster_train.py cubes 0
+#python bert_cluster_train.py cubes 1
+#python bert_cluster_train.py hunters 0 
+#python bert_cluster_train.py hunters 1
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate

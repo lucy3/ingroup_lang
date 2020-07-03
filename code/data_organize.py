@@ -27,8 +27,8 @@ import numpy as np
 wnl = WordNetLemmatizer()
 
 #ROOT = '/data0/lucy/ingroup_lang/'
-#ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
-ROOT = '/mnt/data0/lucy/ingroup_lang/'
+ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
+#ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
@@ -597,11 +597,11 @@ def main():
     #create_subreddit_docs()
     #create_sr_user_docs() 
     #prep_finetuning_part1()
-    prep_finetuning_part2()
+    #prep_finetuning_part2()
     #filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
-    #sample_word_instances()
+    sample_word_instances()
     #tokenizer_check()
     #est_finetuning_gloss_cov()
     sc.stop()
