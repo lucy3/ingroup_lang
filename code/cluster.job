@@ -3,6 +3,7 @@
 #SBATCH --partition=savio2_bigmem
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
+#SBATCH --account=fc_dbamman
 module load java
 
 time /global/home/users/lucy3_li/spark-2.4.5-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 64G --driver-memory 64G --conf "spark.driver.extraJavaOptions=-Djava.io.tmpdir=/global/scratch/lucy3_li" /global/scratch/lucy3_li/ingroup_lang/code/cluster_vectors.py

@@ -388,7 +388,7 @@ def main():
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 
         print("Finetuned BERT")
-        tokenizer = BertTokenizer.from_pretrained(INPUT_LOGS + 'finetuning/', do_lower_case=True)
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         model_name = BertModel.from_pretrained(INPUT_LOGS + 'finetuning/', output_hidden_states=True) 
     else: 
         print("BERT-base")

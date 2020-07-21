@@ -3,6 +3,7 @@
 #SBATCH --job-name=bert
 # Partition:
 #SBATCH --partition=savio2_1080ti
+#SBATCH --account=fc_dbamman
 #
 # Wall clock limit:
 #SBATCH --time=2-00:00:00
@@ -10,6 +11,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
+#SBATCH --mail-user=lucy3_li@berkeley.edu
 
 
 source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/anaconda3/envs/nlp
