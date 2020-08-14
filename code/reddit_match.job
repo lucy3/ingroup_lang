@@ -2,7 +2,7 @@
 # Job name:
 #SBATCH --job-name=ftb3
 # Partition:
-#SBATCH --partition=savio2_1080ti
+#SBATCH --partition=savio2_gpu
 #
 # Wall clock limit:
 #SBATCH --time=3-00:00:00

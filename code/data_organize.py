@@ -36,6 +36,7 @@ SR_FOLDER = ROOT + 'subreddits/'
 SR_FOLDER2 = ROOT + 'subreddits2/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
+AMRAMI_INPUT = '/global/scratch/lucy3_li/bertwsi/reddit_input/'
 
 conf = SparkConf()
 sc = SparkContext(conf=conf)
@@ -591,6 +592,18 @@ def tokenizer_check():
            success = False
     if success: 
         print("TOKENS MATCHED UP!")
+
+def get_all_examples_with_word(word): 
+    rdds = []
+    for folder in os.listdir(SR_FOLDER_MONTH): 
+        path = SR_FOLDER_MONTH + folder + '/RC_sample'
+        data = sc.textFile(path) 
+        data = data.filter(lambda line: not line.startswith('USER1USER0USER'))
+        tokenizer = BasicTokenizer(do_lower_case=True)
+        data = data.filter(lambda line: word in set(tokenizer.tokenize(line.strip())))
+        rdds.append(data)
+    all_occ = sc.union(rdds)
+    all_occ.coalesce(1).saveAsTextFile(AMRAMI_INPUT + word)
             
 def main(): 
     #get_top_subreddits(n=500)
@@ -601,7 +614,8 @@ def main():
     #filter_ukwac()
     #temp()
     #prep_finetuning2(num_epochs=3)
-    sample_word_instances()
+    #sample_word_instances()
+    get_all_examples_with_word('add')
     #tokenizer_check()
     #est_finetuning_gloss_cov()
     sc.stop()

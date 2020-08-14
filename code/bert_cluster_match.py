@@ -137,7 +137,7 @@ class EmbeddingMatcher():
                 current_batch = 6
         return batched_data, batched_words, batched_masks, batched_users
 
-    def load_centroids(self, subreddit, vocab, d, dim_reduct=10, rs=SEED, finetuned=False): 
+    def load_centroids(self, subreddit, vocab, d, dim_reduct=None, rs=SEED, finetuned=False): 
         if finetuned: 
             centroids_folder = LOGS + 'finetuned_reddit_centroids/' 
             pca_folder = LOGS + 'finetuned_reddit_pca/' 
@@ -149,12 +149,13 @@ class EmbeddingMatcher():
         for w in sorted(vocab): 
             token_id = str(d[w])
             if token_id + '.npy' not in os.listdir(centroids_folder): continue
-            centroids = np.load(centroids_folder + token_id + '.npy') 
-            inpath = pca_folder + token_id + \
-             '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
-            pca = load(inpath)
+            centroids = np.load(centroids_folder + token_id + '.npy')
             centroids_d[w] = centroids
-            pca_d[w] = pca
+            if dim_reduct is not None:
+                inpath = pca_folder + token_id + \
+                 '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
+                pca = load(inpath)
+                pca_d[w] = pca
         return centroids_d, pca_d
 
     def batch_match(self, outfile, centroids_d, pca_d, data_dict, viz=False): 
@@ -338,7 +339,7 @@ class EmbeddingMatcher():
                 data[tok].append((prev_w[1], rep)) 
         return data
 
-    def match_embeddings(self, data, vocab, subreddit, d, viz=False, dim_reduct=10, rs=SEED, finetuned=False): 
+    def match_embeddings(self, data, vocab, subreddit, d, viz=False, dim_reduct=None, rs=SEED, finetuned=False): 
         '''
         for each word and its reps, load centroid and match 
         output: line#_user\tword\tcentroid#\n in a subreddit-specific file
@@ -362,10 +363,11 @@ class EmbeddingMatcher():
                 IDs.append(tup[0])
                 reps.append(tup[1])
             reps = np.array(reps)
-            inpath = pca_folder + token_id + \
-             '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
-            pca = load(inpath)
-            reps = pca.transform(reps)
+            if dim_reduct is not None:
+                inpath = pca_folder + token_id + \
+                 '_' + str(dim_reduct) + '_' + str(rs) + '.joblib'
+                pca = load(inpath)
+                reps = pca.transform(reps)
             assert reps.shape[1] == centroids.shape[1] 
             sims = cosine_similarity(reps, centroids) # IDs x n_centroids
             labels = np.argmax(sims, axis=1)
@@ -395,7 +397,7 @@ def main():
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         model_name = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
     model = EmbeddingMatcher(tokenizer, model_name)
-    centroids_d, pca_d = model.load_centroids(subreddit, vocab, d, dim_reduct=10, rs=SEED, finetuned=finetuned)
+    centroids_d, pca_d = model.load_centroids(subreddit, vocab, d, dim_reduct=None, rs=SEED, finetuned=finetuned)
     vocab = set(centroids_d.keys())
     sentences = model.read_sentences(inputfile) 
     time1 = time.time()

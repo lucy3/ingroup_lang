@@ -10,4 +10,4 @@
 #SBATCH --ntasks=1
 #SBATCH --account=fc_dbamman
 
-python bert_post.py /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010/semeval2010_test_bert_avg /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010/semeval2010_test_bert2_avg
+python bert_post.py /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010/semeval2010_test_bert_last /global/scratch/lucy3_li/ingroup_lang/logs/semeval2010/semeval2010_test_bert2_last

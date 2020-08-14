@@ -214,7 +214,7 @@ class BertEmbeddings():
         return batched_data, batched_words, batched_masks, batched_users
 
     def get_embeddings(self, batched_data, batched_words, batched_masks, \
-              batched_users, outfile, only_save_lemmas=False, avg_layers=False): 
+              batched_users, outfile, only_save_lemmas=False, comb_layers=False, last_layer=False): 
         wnl = WordNetLemmatizer()
         ofile = open(outfile, 'w')
         print("Getting embeddings for batched_data of length", len(batched_data))
@@ -244,12 +244,14 @@ class BertEmbeddings():
                             if pos == 'j': pos = 'a'
                             if wnl.lemmatize(w, pos) != lemma: continue
                     if w == '[CLS]' or w == '[SEP]': continue
-                    if avg_layers: 
+                    if comb_layers: 
                         hidden_layers = []
                         for layer_i in range(1, 13): 
                             vec = encoded_layers[-layer_i][sent_i][token_i]
                             hidden_layers.append(vec)
-                        rep = torch.mean(torch.stack(hidden_layers), dim=0)
+                        rep = torch.sum(torch.stack(hidden_layers), dim=0) # change to mean for avg
+                    elif last_layer: 
+                        rep = encoded_layers[-1][sent_i][token_i]
                     else: 
                         hidden_layers = [] 
                         for layer_i in range(1, 5):
@@ -278,20 +280,20 @@ def run_bert_on_reddit():
         embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, outfile)
         print("TOTAL TIME:", time.time() - time2)
 
-def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False, avg_layers=False):
+def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False, comb_layers=False, last_layer=False):
     root_path = root + 'ingroup_lang/' 
     start = time.time()
     embeddings_model = BertEmbeddings()
     if test: 
         if twentyten:
-            outfile = root_path + 'logs/semeval2010/semeval2010_test_bert_avg'
+            outfile = root_path + 'logs/semeval2010/semeval2010_test_bert_last'
             sentences = embeddings_model.read_semeval2010_test_sentences()
         else: 
             outfile = root_path + 'logs/semeval2013/semeval2013_test_bert'
             sentences = embeddings_model.read_semeval_test_sentences()
     else: 
         if twentyten: 
-            outfile = root_path + 'logs/semeval2010/semeval2010_train_bert_avg' 
+            outfile = root_path + 'logs/semeval2010/semeval2010_train_bert_last' 
             sentences = embeddings_model.read_semeval2010_train_sentences()
         else: 
             outfile = root_path + 'logs/semeval2013/semeval2013_train_bert'
@@ -302,15 +304,15 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False, avg
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
     embeddings_model.get_embeddings(batched_data, batched_words, batched_masks, batched_users, \
-            outfile, only_save_lemmas=only_save_lemmas, avg_layers=avg_layers)
+            outfile, only_save_lemmas=only_save_lemmas, comb_layers=comb_layers, last_layer=last_layer)
     print("TOTAL TIME:", time.time() - time2)
 
  
 def main(): 
     #run_bert_on_reddit()
 
-    run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True, avg_layers=True)
-    run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True, avg_layers=True)
+    run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
+    run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True)
 
 if __name__ == "__main__":
     main()
