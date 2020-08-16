@@ -1,5 +1,6 @@
-#from pyspark import SparkConf, SparkContext
-#from pyspark.sql import SQLContext
+# Python 2.7
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -9,7 +10,7 @@ from io import StringIO
 import tqdm
 import numpy as np
 
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
 METRIC = 'bert-base'
 if METRIC == 'finetuned':  
@@ -32,9 +33,9 @@ elif METRIC == 'denoised':
     SUB_TOTALS = LOG_DIR + 'dn_sr_totals.json'
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-#conf = SparkConf()
-#sc = SparkContext(conf=conf)
-#sqlContext = SQLContext(sc)
+conf = SparkConf()
+sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -103,7 +104,6 @@ def calculate_pmi():
     overall_total = sum(list(total_counts.values()))
     with open(SUB_TOTALS, 'r') as infile: 
         subreddit_totals = json.load(infile)
-    log_file.write("ARE THEY EQUAL " + str(overall_total2 == overall_total) + '\n')
     for filename in sorted(os.listdir(SENSE_DIR)): 
         log_file.write(filename + '\n') 
         data = sc.textFile(SENSE_DIR + filename)
@@ -189,13 +189,8 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    '''
-    if METRIC == 'denoised': 
-        count_overall_senses_denoised()
-    else: 
-        count_overall_senses()
-    '''
-    #calculate_pmi()
+    count_overall_senses()
+    calculate_pmi()
     
     #inspect_word('cubes', 'azurelane')
     #inspect_word('hesitation', 'sekiro')
@@ -207,14 +202,14 @@ def main():
     #inspect_word('gb', 'forhonor')
     #inspect_word('abundance', 'edh')
     #inspect_word('tags', 'music') 
-    inspect_word('bowls')
-    inspect_word('curry')
-    inspect_word('pm')
-    inspect_word('associates')
-    inspect_word('spark')
+    #inspect_word('bowls')
+    #inspect_word('curry')
+    #inspect_word('pm')
+    #inspect_word('associates')
+    #inspect_word('spark')
 
-    #calc_max_pmi()
-    #sc.stop()
+    calc_max_pmi()
+    sc.stop()
 
 if __name__ == '__main__':
     main()
