@@ -226,7 +226,7 @@ def main():
     finetuned = bool(int(sys.argv[2]))
     if finetuned: 
         print("Finetuned BERT-base")
-        tokenizer = BertTokenizer.from_pretrained(INPUT_LOGS + 'finetuning/', do_lower_case=True)
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         model_name = BertModel.from_pretrained(INPUT_LOGS + 'finetuning/', output_hidden_states=True) 
     else: 
         print("BERT-base")
@@ -242,11 +242,11 @@ def main():
     time3 = time.time()
     data = model.group_wordpiece(embeddings, word, do_wordpiece)
     time4 = time.time()
-    centroids = model.cluster_embeddings(data, ID, dim_reduct=10, lamb=10000, finetuned=finetuned)
+    centroids = model.cluster_embeddings(data, ID, dim_reduct=None, lamb=10000, finetuned=finetuned)
     if finetuned: 
         np.save(LOGS + 'finetuned_reddit_centroids/' + str(ID) + '.npy', centroids) 
     else: 
-        np.save(LOGS + 'reddit_centroids/' + str(ID) + '.npy', centroids)
+        np.save(LOGS + 'reddit_centroids/' + str(ID) + '.npy', centroids) 
     time5 = time.time()
     print("TOTAL TIME:", time5 - start) 
 

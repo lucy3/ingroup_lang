@@ -19,6 +19,7 @@ import os.path
 from joblib import dump, load
 from nltk.stem import WordNetLemmatizer
 from sklearn.preprocessing import StandardScaler
+import time
 #from pyclustering.cluster.xmeans import xmeans
 #from pyclustering.cluster.encoder import type_encoding, cluster_encoder
 #from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
@@ -27,8 +28,8 @@ wnl = WordNetLemmatizer()
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
-SEMEVAL2010_TRAIN_VECTORS = LOGS + 'semeval2010/semeval2010_train_bert2'
-SEMEVAL2010_TEST_VECTORS = LOGS + 'semeval2010/semeval2010_test_bert2'
+SEMEVAL2010_TRAIN_VECTORS = LOGS + 'semeval2010/semeval2010_train_bert2' 
+SEMEVAL2010_TEST_VECTORS = LOGS + 'semeval2010/semeval2010_test_bert2' 
 SEMEVAL2013_TRAIN_VECTORS = LOGS + 'semeval2013/semeval2013_train_bert2'
 SEMEVAL2013_TEST_VECTORS = LOGS + 'semeval2013/semeval2013_test_bert2'
 SEMEVAL2013_TEST_VECTORS2 = LOGS + 'semeval2013/semeval2013_test_bert3'
@@ -84,6 +85,7 @@ def xmeans_helper(tup, dim_reduct=None, semeval2010=False, rs=0, normalize=False
     return (IDs, (clusters, centroids))
 
 def kmeans_with_crit(tup, dim_reduct=None, semeval2010=False, rs=0, lamb=10000, normalize=False): 
+    #start = time.time() # comment out when not timing
     lemma = tup[0]
     IDs = tup[1][0]
     data = tup[1][1]
@@ -118,6 +120,9 @@ def kmeans_with_crit(tup, dim_reduct=None, semeval2010=False, rs=0, lamb=10000, 
         crit = rss[i]  + lamb*k
         crits.append(crit)
     best_k = np.argmin(crits)
+    #end = time.time() # comment out when not timing
+    #with open(LOGS + 'semeval2010_timing/' + lemma, 'w') as outfile: # comment out
+    #    outfile.write(str(end-start)) # comment out
     return (IDs, (labels[ks[best_k]], centroids[ks[best_k]]))
 
 
@@ -318,16 +323,18 @@ def semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=0, lamb=1000
     if semeval2010: 
         outname = 'semeval2010/semeval2010_centroids/' 
         data = sc.textFile(SEMEVAL2010_TRAIN_VECTORS)
+        #data = sc.textFile(SEMEVAL2010_TEST_VECTORS) # cluster directly on test set 
     else: 
         outname = 'semeval2013/semeval2013_centroids/'
         data = sc.textFile(SEMEVAL2013_TRAIN_VECTORS)
+        #data = sc.textFile(SEMEVAL2013_TEST_VECTORS2)
     if semeval2010: 
         data = data.filter(semeval_lemmas_of_interest) 
     else: 
         data = data.filter(semeval_words_of_interest)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
-    data = data.map(sample_vectors)
+    data = data.map(sample_vectors) 
     out = data.map(partial(kmeans_with_crit, dim_reduct=dim_reduct, 
          semeval2010=semeval2010, rs=rs, lamb=lamb, normalize=normalize)) 
     data.unpersist()
@@ -349,8 +356,8 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0, lamb=
     lemma = tup[0]
     IDs = tup[1][0]
     data = np.array(tup[1][1])
-    if not semeval2010: 
-        lemma = lemma.replace('.j', '.a') # train set has different letter for adj pos
+    #if not semeval2010: 
+    #    lemma = lemma.replace('.j', '.a') # semeval2013 train set has different letter for adj 
     if dim_reduct is not None:
         if normalize: 
             inpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
@@ -465,16 +472,14 @@ def main():
     #get_dup_mapping()
     #filter_semeval2013_vecs()
     #semeval_clusters(test=True, dim_reduct=20)
-    '''
-    for dr in [150]:
-        for lamb in [5000]:    
-            for r in range(2, 5): 
-                semeval_cluster_training(semeval2010=True, dim_reduct=dr, rs=r, lamb=lamb)
-                semeval_cluster_test(semeval2010=True, dim_reduct=dr, rs=r, lamb=lamb)
-    '''
+    #for dr in [150]:
+    #    for lamb in [5000]:    
+    #        for r in range(2, 5): 
     for r in range(5): 
-        semeval_cluster_training(semeval2010=False, dim_reduct=150, rs=r, lamb=10000)
-        semeval_cluster_test(semeval2010=False, dim_reduct=150, rs=r, lamb=10000)
+        for lamb in [10000, 15000, 5000, 1000, 20000]: 
+           semeval_cluster_training(semeval2010=True, dim_reduct=None, rs=r, lamb=lamb)
+           semeval_cluster_test(semeval2010=True, dim_reduct=None, rs=r, lamb=lamb)
+    
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_1')
 

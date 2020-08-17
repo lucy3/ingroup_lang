@@ -1,8 +1,8 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=seed41d
+#SBATCH --job-name=ftb3
 # Partition:
-#SBATCH --partition=savio2_1080ti
+#SBATCH --partition=savio2_gpu
 #
 # Wall clock limit:
 #SBATCH --time=3-00:00:00
@@ -24,7 +24,7 @@ source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/
 #    python bert_cluster_match.py $i 1
 #done
 
-time awk -F "," '{print $1}' ../logs/vocabs/sr_xad | parallel 'python bert_cluster_match.py {} 1' & 
+time awk -F "," '{print $1}' ../logs/vocabs/sr_xac | parallel 'python bert_cluster_match.py {} 0' & 
 wait
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate
