@@ -158,7 +158,7 @@ class EmbeddingMatcher():
                 pca_d[w] = pca
         return centroids_d, pca_d
 
-    def batch_match(self, outfile, centroids_d, pca_d, data_dict, viz=False): 
+    def batch_match(self, outfile, centroids_d, pca_d, data_dict, viz=False, dim_reduct=None): 
         for tok in data_dict: 
             rep_list = data_dict[tok]
             IDs = []
@@ -167,9 +167,10 @@ class EmbeddingMatcher():
                 IDs.append(tup[0])
                 reps.append(tup[1])
             reps = np.array(reps)
-            pca = pca_d[tok]
             centroids = centroids_d[tok]
-            reps = pca.transform(reps)
+            if dim_reduct is not None: 
+                pca = pca_d[tok]
+                reps = pca.transform(reps)
             assert reps.shape[1] == centroids.shape[1] 
             sims = cosine_similarity(reps, centroids) # IDs x n_centroids
             labels = np.argmax(sims, axis=1)
@@ -181,7 +182,7 @@ class EmbeddingMatcher():
                     outfile.write(IDs[i] + '\t' + tok + '\t' + str(labels[i]) + '\n') 
 
     def get_embeddings_and_match(self, subreddit, batched_data, batched_words, batched_masks, batched_users, 
-           centroids_d, pca_d, finetuned=False, viz=False): 
+           centroids_d, pca_d, finetuned=False, viz=False, dim_reduct=None): 
         if finetuned: 
             outfile = open(LOGS + 'finetuned_senses/' + subreddit, 'w')
         else: 
@@ -246,7 +247,7 @@ class EmbeddingMatcher():
                     prev_w = (w, users[sent_i], vector)
             if b % 10 == 0: 
                 # do centroid matching in batches
-                self.batch_match(outfile, centroids_d, pca_d, data_dict, viz=viz)
+                self.batch_match(outfile, centroids_d, pca_d, data_dict, viz=viz, dim_reduct=dim_reduct)
                 data_dict = defaultdict(list)
         # fencepost 
         if len(ongoing_word) == 0 and prev_w[0] is not None: 
@@ -260,7 +261,7 @@ class EmbeddingMatcher():
                 tok += t
             if tok in vocab: 
                 data_dict[tok].append((prev_w[1], rep))
-        self.batch_match(outfile, centroids_d, pca_d, data_dict, viz=viz)
+        self.batch_match(outfile, centroids_d, pca_d, data_dict, viz=viz, dim_reduct=dim_reduct)
         outfile.close()
     
     def get_embeddings(self, batched_data, batched_words, batched_masks, batched_users, vocab): 
@@ -406,7 +407,7 @@ def main():
     time2 = time.time()
     print("TOTAL TIME:", time2 - time1)
     model.get_embeddings_and_match(subreddit, batched_data, batched_words, batched_masks, 
-        batched_users, centroids_d, pca_d, finetuned=finetuned) 
+        batched_users, centroids_d, pca_d, finetuned=finetuned, dim_reduct=None) 
     time3 = time.time()
     print("TOTAL TIME:", time3 - time2) 
     

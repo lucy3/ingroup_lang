@@ -1,6 +1,6 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=ftb3
+#SBATCH --job-name=match_b3
 # Partition:
 #SBATCH --partition=savio2_gpu
 #
@@ -24,7 +24,9 @@ source /global/scratch/lucy3_li/anaconda3/bin/activate /global/scratch/lucy3_li/
 #    python bert_cluster_match.py $i 1
 #done
 
-time awk -F "," '{print $1}' ../logs/vocabs/sr_xac | parallel 'python bert_cluster_match.py {} 0' & 
-wait
+#time awk -F "," '{print $1}' ../logs/vocabs/sr_xac | parallel 'python bert_cluster_match.py {} 0' & 
+#wait
+
+python bert_cluster_match.py investing 0
 
 source /global/scratch/lucy3_li/anaconda3/bin/deactivate
