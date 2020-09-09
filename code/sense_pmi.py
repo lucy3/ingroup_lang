@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'bert-base'
+METRIC = 'ag'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -31,6 +31,13 @@ elif METRIC == 'denoised':
     SENSE_DIR = LOG_DIR + 'finetuned_senses/'
     ALL_SENSES = LOG_DIR + 'dn_total_sense_counts.json'
     SUB_TOTALS = LOG_DIR + 'dn_sr_totals.json'
+elif METRIC == 'ag': 
+    PMI_DIR = LOG_DIR + 'ag_sense_pmi/' 
+    MAX_PMI_DIR = LOG_DIR + 'ag_max_sense_pmi/'
+    SENSE_DIR = LOG_DIR + 'ag_senses/'
+    ALL_SENSES = LOG_DIR + 'ag_total_sense_counts.json'
+    SUB_TOTALS = LOG_DIR + 'ag_sr_totals.json'
+
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
 conf = SparkConf()
