@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'ag'
+METRIC = 'bert-base'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -22,6 +22,7 @@ if METRIC == 'finetuned':
 elif METRIC == 'bert-base':
     PMI_DIR = LOG_DIR + 'base_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
+    MOST_PMI_DIR = LOG_DIR + 'base_most_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'senses/'
     ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
     SUB_TOTALS = LOG_DIR + 'base_sr_totals.json' 
@@ -34,6 +35,7 @@ elif METRIC == 'denoised':
 elif METRIC == 'ag': 
     PMI_DIR = LOG_DIR + 'ag_sense_pmi/' 
     MAX_PMI_DIR = LOG_DIR + 'ag_max_sense_pmi/'
+    MOST_PMI_DIR = LOG_DIR + 'ag_most_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'ag_senses/'
     ALL_SENSES = LOG_DIR + 'ag_total_sense_counts.json'
     SUB_TOTALS = LOG_DIR + 'ag_sr_totals.json'
@@ -176,6 +178,36 @@ def inspect_word(word, subreddit=None):
         print(np.mean(list(d.values())))
         print(np.var(list(d.values())))
     
+def calc_most_pmi(): 
+    '''
+    For each file in PMI_DIR, get the sense pmi of the
+    most common sense of a word
+    '''
+    for filename in tqdm.tqdm(sorted(os.listdir(PMI_DIR))): 
+       scores = defaultdict(list)
+       counts = defaultdict(list)
+       with open(PMI_DIR + filename, 'r') as infile: 
+           reader = csv.DictReader(infile)
+           for row in reader: 
+               word = row['sense'].split('#####')[0]
+               scores[word].append(float(row['pmi']))
+               counts[word].append(int(row['count']))
+       words = []
+       score_list = []
+       count_list = []
+       for word in scores: 
+           words.append(word)
+           idx = np.argmax(counts[word])
+           score_list.append(scores[word][idx])
+           count_list.append(counts[word][idx])
+       zipped = list(zip(score_list, words, count_list))
+       zipped.sort(reverse=True)
+       with open(MOST_PMI_DIR + filename, 'w') as outfile: 
+           writer = csv.writer(outfile)
+           writer.writerow(['word', 'most_pmi', 'count'])
+           for row in zipped: 
+               writer.writerow([row[1], str(row[0]), str(row[2])])
+
 def calc_max_pmi(): 
     '''
     For each file in PMI_DIR, get max sense pmi
@@ -196,8 +228,8 @@ def calc_max_pmi():
                 writer.writerow([word, str(max(scores[word])), str(counts[word])])
 
 def main(): 
-    count_overall_senses()
-    calculate_pmi()
+    #count_overall_senses()
+    #calculate_pmi()
     
     #inspect_word('cubes', 'azurelane')
     #inspect_word('hesitation', 'sekiro')
@@ -215,7 +247,8 @@ def main():
     #inspect_word('associates')
     #inspect_word('spark')
 
-    calc_max_pmi()
+    #calc_max_pmi()
+    calc_most_pmi()
     sc.stop()
 
 if __name__ == '__main__':
