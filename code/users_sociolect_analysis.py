@@ -69,14 +69,17 @@ def get_features(include_topics=False, factor_topics=False):
         feature_names.append('topic')
     return feature_dict, feature_names
 
-def get_data(sense_cutoff, type_cutoff, include_topics=False, factor_topics=False):
+def get_data(sense_cutoff, type_cutoff, include_topics=False, factor_topics=False, ag=False):
     feature_dict, feature_names = get_features(include_topics=include_topics, 
                                                factor_topics=factor_topics)
     X = []
     y = []
     y_bin = []
     type_path = root + '/logs/pmi/'
-    sense_path = root + 'logs/ft_max_sense_pmi/'
+    if ag: 
+        sense_path = root + 'logs/ag_most_sense_pmi/'
+    else:
+        sense_path = root + 'logs/base_most_sense_pmi/'
     for sr in tqdm.tqdm(sorted(feature_dict.keys())): 
         X.append(feature_dict[sr])
         sense_scores = defaultdict(float)
@@ -86,7 +89,7 @@ def get_data(sense_cutoff, type_cutoff, include_topics=False, factor_topics=Fals
             reader = csv.DictReader(infile)
             for row in reader: 
                 w = row['word']
-                score = float(row['max_pmi'])
+                score = float(row['most_pmi'])
                 sense_scores[w] = score
         with open(type_path + sr + '_0.2.csv', 'r') as infile:
             reader = csv.DictReader(infile)
@@ -125,12 +128,16 @@ def get_data_old(sociolect_metric, cut_off):
         path = root + '/logs/pmi/'
     elif sociolect_metric == 'tfidf': 
         path = root + '/logs/tfidf/'
-    elif sociolect_metric == 'max_pmi': 
-        path = root + 'logs/ft_max_sense_pmi/'
+    elif sociolect_metric == 'ag_most_pmi': 
+        path = root + 'logs/ag_most_sense_pmi/'
+        sociolect_metric == 'most_pmi'
+    elif sociolect_metric == 'base_most_pmi': 
+        path = root + 'logs/base_most_sense_pmi/'
+        sociolect_metric == 'most_pmi'
     for sr in sorted(feature_dict.keys()): 
         X.append(feature_dict[sr])
         f = sr + '_0.2.csv' 
-        if sociolect_metric == 'max_pmi': 
+        if sociolect_metric == 'most_pmi': 
             f = sr + '.csv'
         df = pd.read_csv(path + f, engine='python')
         notable_words = df[df['count'] > count_cut_off]
@@ -238,13 +245,14 @@ def u_tests(sociolect_metric=None):
     #scs = [0.5007301153953705, 0.7039233649614907, 0.953026733779678, 1.2910247870623466, 1.8434940980468622, 3.038046754473495, 3.520420472064922]
     #tcs = [0.143621134298, 0.3674494252902001, 0.6634994838245996, 1.1110732048100005, 2.0168260770319986, 5.008815935891599, 5.884734049733797]
     scs = [3.038046754473495] 
-    tcs = [5.940024063721074]
+    ag_tcs = [5.940024063721074]
+    base_tcs = [5.940024063721074]
     if sociolect_metric is None: 
         for i in range(len(scs)): 
             print("Combined type and sense U-tests")
-            sense_cutoff = scs[i]
+            sense_cutoff = base_scs[i]
             type_cutoff = tcs[i]
-            X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff)
+            X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False)
             run_u_test('community size', feature_names.index('community size'), X, y_bin, 'greater')
             run_u_test('user activity', feature_names.index('user activity'), X, y_bin, 'less')
             run_u_test('user loyalty 50', feature_names.index('user loyalty 50'), X, y_bin, 'less')
@@ -253,8 +261,10 @@ def u_tests(sociolect_metric=None):
         print(sociolect_metric)
         if sociolect_metric == 'pmi':
             cut_offs = tcs
-        elif sociolect_metric == 'max_pmi':
-            cut_offs = scs
+        elif sociolect_metric == 'ag_most_pmi':
+            cut_offs = ag_scs
+        elif sociolect_metric == 'base_most_pmi':
+            cut_offs = base_scs
         for i in range(len(cut_offs)): 
             X, y, y_bin, feature_names = get_data_old(sociolect_metric, cut_offs[i])
             run_u_test('community size', feature_names.index('community size'), X, y_bin, 'greater')
@@ -337,8 +347,8 @@ def main():
     #predict_ols('tfidf')
     u_tests('pmi')
     #u_tests('tfidf')
-    #u_tests('max_pmi')
-    #u_tests()
+    u_tests('most_pmi')
+    u_tests()
     #predict_ols()
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
