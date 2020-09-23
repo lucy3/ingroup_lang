@@ -2,6 +2,7 @@ from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
 import json
 import os
+from collections import Counter
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
@@ -135,11 +136,28 @@ def count_subscribers():
             outfile.write(sr + ',' + str(subreddits[sr] / float(c)) + '\n')
     outfile.close()
 
+def get_active_users(): 
+    '''
+    Get the number of comments a user posts in a subreddit
+    Get the average sense PMI and type PMI of words used by that user
+    '''
+    for folder_name in os.listdir(SR_FOLDER): 
+        if os.path.isdir(SR_FOLDER + folder_name): 
+            reddits.add(folder_name)
+    path = DATA + 'RC_all'
+    #path = DATA + 'tinyData'
+    data = sc.textFile(path)
+    data = data.filter(subreddit_of_interest)
+    data = data.map(get_user)
+    data = data.map(lambda tup: (tup[1], tup[0])).groupByKey().mapValues(list).mapValues(Counter).collectAsMap() # subreddit, user
+    with open(LOG_DIR + 'sr_user_counts.json', 'w') as outfile: 
+        json.dump(data, outfile)
 
 def main(): 
     #count_unique_users()
     #user_activity()
-    count_subscribers()
+    #count_subscribers()
+    get_active_users()
     sc.stop()
 
 if __name__ == '__main__':

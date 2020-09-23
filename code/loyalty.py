@@ -13,7 +13,7 @@ sc = SparkContext(conf=conf)
 sqlContext = SQLContext(sc)
 reddits = set()
 
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOG_DIR = ROOT + 'logs/'
 COMMENTS = DATA + 'RC_all'
@@ -66,6 +66,16 @@ def get_user_subreddits():
         json.dump(user_sr, outfile)
         
 def calculate_loyalty(threshold=0.5): 
+    non_english_reddits = set()
+    with open(REMOVED_SRS, 'r') as inputfile: 
+        for line in inputfile: 
+            non_english_reddits.add(line.strip().lower())
+    with open(SUBREDDITS, 'r') as inputfile: 
+        for line in inputfile: 
+            sr = line.strip().lower()
+            if sr not in non_english_reddits: 
+                reddits.add(sr)
+
     with open(ROOT + 'logs/user_sr.json', 'r') as infile: 
         user_sr = json.load(infile)
     loyal_users = defaultdict(set)
@@ -78,7 +88,7 @@ def calculate_loyalty(threshold=0.5):
                 break
     all_users = defaultdict(set)
     for user in user_sr: 
-        srs = set(user_sr[user])
+        srs = set(user_sr[user]) & reddits
         for sr in srs: 
             all_users[sr].add(user)
     outfile = open(LOG_DIR + 'commentor_loyalty_'+str(int(threshold*100)), 'w')
@@ -89,7 +99,6 @@ def calculate_loyalty(threshold=0.5):
     outfile.close()
 
 def main(): 
-    #count_unique_users()
     get_user_subreddits()
     for threshold in [0.5]: 
         calculate_loyalty(threshold)
