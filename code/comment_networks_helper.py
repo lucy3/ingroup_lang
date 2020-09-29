@@ -6,12 +6,30 @@ import json
 import networkx as nx
 import os
 
-ROOT = '/data0/lucy/ingroup_lang/'
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
 #ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 NETWORKS = LOGS + 'networks/'
 
+def get_user_centrality(): 
+    '''
+    Calculate betweenness centrality of each user in a subreddit
+    '''
+    centralities = {}
+    for sr in os.listdir(NETWORKS):
+        print(sr) 
+        G = nx.read_edgelist(NETWORKS + sr, delimiter=',', data=(('weight',float),))
+        G.remove_node("[deleted]")
+        for e in G.edges(data=False): 
+            G[e[0]][e[1]]['distance'] = 1.0 / G[e[0]][e[1]]['weight']
+        
+        #d = nx.eigenvector_centrality(G, weight='weight', max_iter=10000)
+        #d = nx.closeness_centrality(G, distance='distance')
+        centralities[sr] = d
+    with open(LOGS + 'user_centralities.json', 'w') as outfile: 
+        json.dump(centralities, outfile)
+ 
 def calculate_density(): 
     '''
     calculate density of
@@ -75,9 +93,10 @@ def create_edgelist():
                 outfile.write(e[0] + ',' + e[1] + ',' + str(edges[e]) + '\n') 
 
 def main(): 
-    create_edgelist()
-    calculate_density()
+    #create_edgelist()
+    #calculate_density()
     #sanity_check_edgelist()
+    get_user_centrality()
 
 if __name__ == '__main__':
     main()
