@@ -171,6 +171,18 @@ def score_comment(line, word_scores=None, tokenizer=None):
             scores.append(None)
     return ((sr, commentor), scores)
 
+def save_doc(tup): 
+    sr = tup[0]
+    usr_score = tup[1] # list of (users, [scores])
+    outpath = LOG_DIR + 'base_user_scores/' + sr
+    with open(outpath, 'w') as outfile: 
+        for t in usr_score: 
+            usr = t[0]
+            scores = [str(s) for s in t[1]]
+            outfile.write(usr + '\t') 
+            outfile.write('\t'.join(scores))
+            outfile.write('\n') 
+
 def get_user_scores(score_path, output_path, score_name): 
     '''
     Calculates PMI scores for each word a user uses.  
@@ -201,9 +213,8 @@ def get_user_scores(score_path, output_path, score_name):
     # concatenate score lists for each user in each subreddit, rearrange
     data = data.reduceByKey(lambda n1, n2: n1 + n2).map(lambda tup: (tup[0][0], (tup[0][1], tup[1])))
     # group by subreddit, map values to list, collect
-    data = data.groupByKey().mapValues(list).collectAsMap()
-    with open(output_path, 'w') as outfile: 
-        json.dump(data, outfile)
+    data = data.groupByKey().mapValues(list)
+    data = data.foreach(save_doc) 
 
 def main(): 
     #count_unique_users()
