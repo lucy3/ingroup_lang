@@ -2,6 +2,10 @@ from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
 import json
 import os
+from collections import Counter
+from functools import partial
+import csv
+from transformers import BasicTokenizer
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 DATA = ROOT + 'data/'
@@ -135,11 +139,89 @@ def count_subscribers():
             outfile.write(sr + ',' + str(subreddits[sr] / float(c)) + '\n')
     outfile.close()
 
+def get_active_users(): 
+    '''
+    Get the number of comments a user posts in a subreddit
+    Get the average sense PMI and type PMI of words used by that user
+    '''
+    for folder_name in os.listdir(SR_FOLDER): 
+        if os.path.isdir(SR_FOLDER + folder_name): 
+            reddits.add(folder_name)
+    path = DATA + 'RC_all'
+    #path = DATA + 'tinyData'
+    data = sc.textFile(path)
+    data = data.filter(subreddit_of_interest)
+    data = data.map(get_user)
+    data = data.map(lambda tup: (tup[1], tup[0])).groupByKey().mapValues(list).mapValues(Counter).collectAsMap() # subreddit, user
+    with open(LOG_DIR + 'sr_user_counts.json', 'w') as outfile: 
+        json.dump(data, outfile)
+
+def score_comment(line, word_scores=None, tokenizer=None): 
+    comment = json.loads(line)
+    commentor = comment["author"].lower()
+    sr = comment['subreddit'].lower()
+    text = comment['body']
+    words = tokenizer.tokenize(text)
+    scores = []
+    sr_word_scores = word_scores[sr]
+    for w in words: 
+        if w in sr_word_scores: 
+            scores.append(sr_word_scores[w])
+        else:
+            scores.append(None)
+    return ((sr, commentor), scores)
+
+def save_doc(tup): 
+    sr = tup[0]
+    usr_score = tup[1] # list of (users, [scores])
+    outpath = LOG_DIR + 'base_user_scores/' + sr
+    with open(outpath, 'w') as outfile: 
+        for t in usr_score: 
+            usr = t[0]
+            scores = [str(s) for s in t[1]]
+            outfile.write(usr + '\t') 
+            outfile.write('\t'.join(scores))
+            outfile.write('\n') 
+
+def get_user_scores(score_path, output_path, score_name): 
+    '''
+    Calculates PMI scores for each word a user uses.  
+    Input: directory to PMI scores, output directory
+    Output: dictionary of binarized username to list of scores for each word
+    '''
+    # get word_scores
+    word_scores = {}
+    for filename in os.listdir(score_path): 
+        sr_scores = {}
+        with open(score_path + filename, 'r') as infile: 
+           reader = csv.DictReader(infile) 
+           for row in reader: 
+               word = row['word']
+               score = row[score_name]
+               sr_scores[word] = score
+        sr = filename.replace('_0.2.csv', '').replace('.csv', '')
+        word_scores[sr] = sr_scores
+    tokenizer = BasicTokenizer(do_lower_case=True) 
+    for folder_name in os.listdir(SR_FOLDER): 
+        if os.path.isdir(SR_FOLDER + folder_name): 
+            reddits.add(folder_name)
+    path = DATA + 'RC_all'
+    #path = DATA + 'tinyData'
+    data = sc.textFile(path)
+    data = data.filter(subreddit_of_interest)
+    data = data.map(partial(score_comment, word_scores=word_scores, tokenizer=tokenizer))
+    # concatenate score lists for each user in each subreddit, rearrange
+    data = data.reduceByKey(lambda n1, n2: n1 + n2).map(lambda tup: (tup[0][0], (tup[0][1], tup[1])))
+    # group by subreddit, map values to list, collect
+    data = data.groupByKey().mapValues(list)
+    data = data.foreach(save_doc) 
 
 def main(): 
     #count_unique_users()
     #user_activity()
-    count_subscribers()
+    #count_subscribers()
+    #get_active_users()
+    get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores.json', 'most_pmi')
     sc.stop()
 
 if __name__ == '__main__':

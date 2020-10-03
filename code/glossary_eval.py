@@ -42,6 +42,7 @@ def basic_stats():
     sr_terms = defaultdict(set)
     mwe_set = defaultdict(set)
     total_terms = 0
+    num_mwes = 0
     with open(TERMS, 'r') as infile: 
         reader = csv.DictReader(infile, delimiter=',')
         for row in reader:
@@ -50,6 +51,7 @@ def basic_stats():
             sr_terms[row['subreddit']].add(term)
             term_len = len(tokenizer.tokenize(term))
             if term_len > 1: 
+                num_mwes += 1
                 mwe_set[term_len].add(term)
     assert sorted(sr_list) == sorted(sr_set)
     sr_count = Counter()
@@ -61,19 +63,22 @@ def basic_stats():
     print("Min number of terms:", np.min(list(sr_count.values())))
     print("Max number of terms:", np.max(list(sr_count.values())))
     print("Total number of terms:", sum(list(sr_count.values())))
-    print("Total number of mwes:", sum(list(mwe_count.values())))
+    print("Total number of non-unique mwes:", num_mwes)
+    print("Total number of unique mwes:", sum(list(mwe_count.values())))
     for term_len in sorted(mwe_count.keys()): 
         print(term_len, mwe_count[term_len])
 
 def get_sr2terms_no_mwes(): 
     tokenizer = BasicTokenizer(do_lower_case=True)
     sr2terms = defaultdict(list)
+    num_mwes = 0
     with open(TERMS, 'r') as infile: 
         reader = csv.DictReader(infile, delimiter=',')
         for row in reader:
             term = row['term'].strip().lower()
             # ignore MWEs
-            if len(tokenizer.tokenize(term)) > 1: continue
+            if len(tokenizer.tokenize(term)) > 1: 
+                continue
             sr2terms[row['subreddit']].append(term)
     return sr2terms
 
@@ -228,7 +233,7 @@ def count_exact_string_matches():
     Get glossary terms that actually
     show up in their subreddit based on exact string matches
     """
-    sr2terms = get_sr2terms_original()
+    sr2terms = get_sr2terms_no_mwes()
     # count it for each subreddit
     existing_terms = defaultdict(set) # sr : set of terms that show up
     num_mwe = 0 
@@ -255,14 +260,26 @@ def compare_gloss_dicts():
     sr2terms = get_sr2terms_original()
     existing_count = 0
     all_count = 0
+    unique_words = set()
+    term2srs = defaultdict(list)
     for sr in sr2terms: 
         exist = set(exist_gloss_terms[sr])
+        for w in exist: 
+            term2srs[w].append(sr)
+        unique_words.update(exist)
         existing_count += len(exist)
         all_t = set(sr2terms[sr])
         all_count += len(all_t)
         print(sr, len(all_t - exist), all_t - exist)
+    shared_w = 0
+    for w in term2srs: 
+        if len(term2srs[w]) > 1: 
+            shared_w += 1
+            print(w, term2srs[w])
+    print("Number of words shared across glossaries:", shared_w)
+    print("Number of unique words in our evaluation:", len(unique_words))
     print("Number of words in our evaluation:", existing_count)
-    print("Total number of glossary words:", all_count)
+    print("Total number of glossary words (including MWEs):", all_count)
     
 def sanity_check_gloss_words(): 
     '''
@@ -290,7 +307,7 @@ def main():
     #basic_stats()
     #find_best_parameters()
     #sense_vocab_coverage()
-    count_exact_string_matches()
+    #count_exact_string_matches()
     compare_gloss_dicts()
     #sanity_check_gloss_words()
 
