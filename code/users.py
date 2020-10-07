@@ -21,8 +21,10 @@ reddits = set()
 
 def subreddit_of_interest(line): 
     comment = json.loads(line)
+    # TODO: change back 
     return 'subreddit' in comment and 'body' in comment and \
-        comment['subreddit'].lower() in reddits
+        comment['subreddit'].lower() == 'askreddit'
+    #comment['subreddit'].lower() in reddits
 
 def subreddit_of_interest_posts(line): 
     post = json.loads(line)
@@ -166,15 +168,15 @@ def score_comment(line, word_scores=None, tokenizer=None):
     sr_word_scores = word_scores[sr]
     for w in words: 
         if w in sr_word_scores: 
-            scores.append(sr_word_scores[w])
+            scores.append(round(sr_word_scores[w], 6))
         else:
             scores.append(None)
     return ((sr, commentor), scores)
 
-def save_doc(tup): 
+def save_doc(tup, save_dir=None): 
     sr = tup[0]
     usr_score = tup[1] # list of (users, [scores])
-    outpath = LOG_DIR + 'base_user_scores/' + sr
+    outpath = save_dir + sr
     with open(outpath, 'w') as outfile: 
         for t in usr_score: 
             usr = t[0]
@@ -183,7 +185,7 @@ def save_doc(tup):
             outfile.write('\t'.join(scores))
             outfile.write('\n') 
 
-def get_user_scores(score_path, output_path, score_name): 
+def get_user_scores(score_path, outpath, score_name): 
     '''
     Calculates PMI scores for each word a user uses.  
     Input: directory to PMI scores, output directory
@@ -198,7 +200,7 @@ def get_user_scores(score_path, output_path, score_name):
            for row in reader: 
                word = row['word']
                score = row[score_name]
-               sr_scores[word] = score
+               sr_scores[word] = float(score)
         sr = filename.replace('_0.2.csv', '').replace('.csv', '')
         word_scores[sr] = sr_scores
     tokenizer = BasicTokenizer(do_lower_case=True) 
@@ -208,20 +210,50 @@ def get_user_scores(score_path, output_path, score_name):
     path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
+    # TODO TODO TODO TODO TODO change the filter back to the other filter function
     data = data.filter(subreddit_of_interest)
     data = data.map(partial(score_comment, word_scores=word_scores, tokenizer=tokenizer))
     # concatenate score lists for each user in each subreddit, rearrange
     data = data.reduceByKey(lambda n1, n2: n1 + n2).map(lambda tup: (tup[0][0], (tup[0][1], tup[1])))
     # group by subreddit, map values to list, collect
     data = data.groupByKey().mapValues(list)
-    data = data.foreach(save_doc) 
+    data = data.foreach(partial(save_doc, save_dir=outpath))
+    
+def get_usr_score(line, cutoff_score=None): 
+    return (0, 0)
+    line = line.strip()
+    contents = line.split('\t')
+    usr = contents[0]
+    num_scores = len(contents[1:])
+    if num_scores == 0: return (usr, 0)
+    high_count = 0
+    for val in contents[1:]: 
+        if val != 'None': 
+            if float(val) > cutoff_score: 
+                high_count += 1
+    return (usr, float(high_count) / num_scores)
+    
+def get_user_scores_helper(input_path, output_path, cutoff_score): 
+    ret = {} # sr : {user : centrality}
+    for filename in os.listdir(input_path):
+        if filename != 'askreddit': continue
+        data = sc.textFile(input_path + filename)
+        numP = data.getNumPartitions()
+        data = data.map(partial(get_usr_score, cutoff_score=cutoff_score))
+        data = data.repartition(numP)
+        user_scores = data.collectAsMap()
+        ret[filename] = user_scores
+    with open(output_path + 'base_user_scores.json', 'w') as outfile: 
+        json.dump(ret, outfile)
 
 def main(): 
     #count_unique_users()
     #user_activity()
     #count_subscribers()
     #get_active_users()
-    get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores.json', 'most_pmi')
+    # TODO change back to all 400+ sr not just askreddit TODO
+    get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores/', 'most_pmi')
+    #get_user_scores_helper(LOG_DIR + 'base_user_scores/', LOG_DIR, 2.8615285178167453)
     sc.stop()
 
 if __name__ == '__main__':
