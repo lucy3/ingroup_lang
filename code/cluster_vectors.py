@@ -356,8 +356,8 @@ def semeval_match_centroids(tup, semeval2010=False, dim_reduct=None, rs=0, lamb=
     lemma = tup[0]
     IDs = tup[1][0]
     data = np.array(tup[1][1])
-    #if not semeval2010: 
-    #    lemma = lemma.replace('.j', '.a') # semeval2013 train set has different letter for adj 
+    if not semeval2010: 
+        lemma = lemma.replace('.j', '.a') # semeval2013 train set has different letter for adj 
     if dim_reduct is not None:
         if normalize: 
             inpath = LOGS + 'pca/' + str(semeval2010) + '_' + lemma + '_' + \
@@ -475,10 +475,12 @@ def main():
     #for dr in [150]:
     #    for lamb in [5000]:    
     #        for r in range(2, 5): 
-    for r in range(5): 
-        for lamb in [10000, 15000, 5000, 1000, 20000]: 
-           semeval_cluster_training(semeval2010=True, dim_reduct=None, rs=r, lamb=lamb)
-           semeval_cluster_test(semeval2010=True, dim_reduct=None, rs=r, lamb=lamb)
+    #for r in range(5): 
+    #    for lamb in [10000, 15000, 5000, 1000, 20000]: 
+    for r in range(2, 5):
+         lamb = 10000
+         semeval_cluster_training(semeval2010=False, dim_reduct=None, rs=r, lamb=lamb)
+         semeval_cluster_test(semeval2010=False, dim_reduct=None, rs=r, lamb=lamb)
     
     #read_labels_for_eval('../semeval-2010-task-14/evaluation/unsup_eval/keys/all.key', 
     #    LOGS + 'semeval2010/semeval2010_clusters100_1')

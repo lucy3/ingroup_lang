@@ -6,5 +6,5 @@
 #SBATCH --account=fc_dbamman
 module load java
 
-time /global/home/users/lucy3_li/spark-2.4.5-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 64G --driver-memory 64G --conf "spark.driver.extraJavaOptions=-Djava.io.tmpdir=/global/scratch/lucy3_li" /global/scratch/lucy3_li/ingroup_lang/code/cluster_vectors.py
+time /global/home/users/lucy3_li/spark-2.4.5-bin-hadoop2.7/bin/spark-submit --master 'local[*]' --executor-memory 72G --driver-memory 72G --conf "spark.driver.extraJavaOptions=-Djava.io.tmpdir=/global/scratch/lucy3_li" /global/scratch/lucy3_li/ingroup_lang/code/cluster_vectors.py
 
