@@ -1,6 +1,6 @@
 ## Python 2.7
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'bert-base'
+METRIC = 'ag'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -42,9 +42,9 @@ elif METRIC == 'ag':
 
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -140,7 +140,7 @@ def calculate_pmi():
 
 def inspect_word(word, subreddit=None): 
     '''
-    looks at max sense pmi for different subreddits for one word 
+    looks at most sense pmi for different subreddits for one word 
     '''
     if subreddit is not None: 
         print("~~~~~ WORD:", word, "SUBREDDIT:", subreddit, "~~~~~~")
@@ -152,10 +152,11 @@ def inspect_word(word, subreddit=None):
                 if row['sense'].split('#####')[0] == word: 
                     scores[row['sense']] = float(row['pmi'])
                     counts[row['sense']] = int(row['count'])
-            top_sense, score = scores.most_common(1)[0]
-            for tup in scores.most_common(): 
-                print(tup[0], tup[1], counts[tup[0]])
+            top_sense, score = counts.most_common(1)[0]
+            for tup in counts.most_common(): 
+                print(tup[0], tup[1], scores[tup[0]])
         d = Counter()
+        print(top_sense)
         for filename in tqdm.tqdm(sorted(os.listdir(PMI_DIR)), leave=False): 
             with open(PMI_DIR + filename, 'r') as infile: 
                 reader = csv.DictReader(infile)
@@ -165,16 +166,13 @@ def inspect_word(word, subreddit=None):
         print(d.most_common()[:5])
     else: 
         d = Counter()
-        for filename in tqdm.tqdm(sorted(os.listdir(PMI_DIR))): 
-            scores = []
-            with open(PMI_DIR + filename, 'r') as infile: 
+        for filename in tqdm.tqdm(sorted(os.listdir(MOST_PMI_DIR))): 
+            with open(MOST_PMI_DIR + filename, 'r') as infile: 
                 reader = csv.DictReader(infile)
                 for row in reader: 
-                    if row['sense'].split('#####')[0] == word: 
-                        scores.append(float(row['pmi']))
-            if scores != []: 
-                d[filename.replace('.csv', '')] = max(scores)
-        print(d.most_common())
+                    if row['word'] == word: 
+                        d[filename.replace('.csv', '')] = float(row['most_pmi'])
+        print(d.most_common()[:5])
         print(np.mean(list(d.values())))
         print(np.var(list(d.values())))
     
@@ -246,10 +244,11 @@ def main():
     #inspect_word('pm')
     #inspect_word('associates')
     #inspect_word('spark')
+    inspect_word('haul', subreddit='fashionreps')
 
     #calc_max_pmi()
-    calc_most_pmi()
-    sc.stop()
+    #calc_most_pmi()
+    #sc.stop()
 
 if __name__ == '__main__':
     main()

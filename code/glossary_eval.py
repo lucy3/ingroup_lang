@@ -91,6 +91,28 @@ def get_sr2terms_original():
             sr2terms[row['subreddit']].append(term)
     return sr2terms
 
+def total_recall(): 
+    sr2terms = get_sr2terms_no_mwes()
+    # total possible recall of glossary words
+    total_count = 0
+    recall_count = 0
+    for filename in sorted(os.listdir(PMI_PATH)): 
+        subreddit = filename.replace('.csv', '').replace('_0.2', '')
+        if subreddit not in sr2terms: continue
+        gloss_terms = set(sr2terms[subreddit])
+        scored_words = set()
+        with open(PMI_PATH + filename, 'r') as infile: 
+            reader = csv.DictReader(infile)
+            for row in reader: 
+                w = row['word'] 
+                score = float(row['pmi'])
+                if w in gloss_terms: 
+                    recall_count += 1
+                scored_words.add(w)
+        print(subreddit, gloss_terms - scored_words)
+        total_count += len(gloss_terms)
+    print(recall_count / total_count)
+
 def get_sr2terms(): 
     with open(ROOT + 'logs/existing_gloss_terms.json', 'r') as infile: 
         exist_gloss_terms = json.load(infile)
@@ -308,7 +330,8 @@ def main():
     #find_best_parameters()
     #sense_vocab_coverage()
     #count_exact_string_matches()
-    compare_gloss_dicts()
+    #compare_gloss_dicts()
+    total_recall()
     #sanity_check_gloss_words()
 
 if __name__ == '__main__':

@@ -223,13 +223,11 @@ def predict_sociolects(sociolect_metric):
     print("--------------------------")
     print
 
-def predict_ols(sociolect_metric=None): 
-    if sociolect_metric is None:
-        sense_cutoff = 3.038046754473495
-        type_cutoff = 5.008815935891599
-        X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, include_topics=True, factor_topics=True)
-    else:
-        X, y, y_bin, feature_names = get_data(sociolect_metric)
+def predict_ols(): 
+    sense_cutoff = 2.8615285178167453
+    type_cutoff = 5.006313171329149
+    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=False, 
+                                          factor_topics=False, include_subs=False)
     X_1 = sm.add_constant(X)
     model = sm.OLS(y, X_1)
     results = model.fit()
@@ -252,11 +250,11 @@ def u_tests(sociolect_metric=None):
     less sociolect-y communities are larger, less active, less loyal, less dense
     '''
     # values copied from "senses" Python Notebook
-    #scs = [0.5007301153953705, 0.7039233649614907, 0.953026733779678, 1.2910247870623466, 1.8434940980468622, 3.038046754473495, 3.520420472064922]
-    #tcs = [0.143621134298, 0.3674494252902001, 0.6634994838245996, 1.1110732048100005, 2.0168260770319986, 5.008815935891599, 5.884734049733797]
-    tcs = [5.006313171329149] 
-    ag_scs = [2.66291875427572]
-    base_scs = [2.8615285178167453]
+    base_scs = [0.2789802191673347, 0.48007543419270565, 0.7324234063287886, 1.0796816376343343, 1.646291431133463, 2.8615285178167453]
+    tcs = [0.14368642975619209, 0.3675468465645889, 0.6636654082573912, 1.110993113597629, 2.016327239070056, 5.006313171329149]
+    #tcs = [5.006313171329149] 
+    #ag_scs = [2.66291875427572]
+    #base_scs = [2.8615285178167453]
     if sociolect_metric is None: 
         for i in range(len(tcs)): 
             print("Combined type and sense U-tests")
@@ -361,9 +359,10 @@ def main():
     #predict_ols('tfidf')
 
     #u_tests('pmi')
-    u_tests('base_most_pmi')
+    #u_tests('base_most_pmi')
+    #u_tests()
 
-    #predict_ols()
+    predict_ols()
     #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":

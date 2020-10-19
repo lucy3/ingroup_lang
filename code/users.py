@@ -21,10 +21,8 @@ reddits = set()
 
 def subreddit_of_interest(line): 
     comment = json.loads(line)
-    # TODO: change back 
     return 'subreddit' in comment and 'body' in comment and \
-        comment['subreddit'].lower() == 'askreddit'
-    #comment['subreddit'].lower() in reddits
+        comment['subreddit'].lower() in reddits
 
 def subreddit_of_interest_posts(line): 
     post = json.loads(line)
@@ -144,7 +142,6 @@ def count_subscribers():
 def get_active_users(): 
     '''
     Get the number of comments a user posts in a subreddit
-    Get the average sense PMI and type PMI of words used by that user
     '''
     for folder_name in os.listdir(SR_FOLDER): 
         if os.path.isdir(SR_FOLDER + folder_name): 
@@ -210,7 +207,6 @@ def get_user_scores(score_path, outpath, score_name):
     path = DATA + 'RC_all'
     #path = DATA + 'tinyData'
     data = sc.textFile(path)
-    # TODO TODO TODO TODO TODO change the filter back to the other filter function
     data = data.filter(subreddit_of_interest)
     data = data.map(partial(score_comment, word_scores=word_scores, tokenizer=tokenizer))
     # concatenate score lists for each user in each subreddit, rearrange
@@ -220,7 +216,6 @@ def get_user_scores(score_path, outpath, score_name):
     data = data.foreach(partial(save_doc, save_dir=outpath))
     
 def get_usr_score(line, cutoff_score=None): 
-    return (0, 0)
     line = line.strip()
     contents = line.split('\t')
     usr = contents[0]
@@ -234,16 +229,22 @@ def get_usr_score(line, cutoff_score=None):
     return (usr, float(high_count) / num_scores)
     
 def get_user_scores_helper(input_path, output_path, cutoff_score): 
-    ret = {} # sr : {user : centrality}
+    ret = {} # sr : {user : prob}
     for filename in os.listdir(input_path):
-        if filename != 'askreddit': continue
-        data = sc.textFile(input_path + filename)
-        numP = data.getNumPartitions()
-        data = data.map(partial(get_usr_score, cutoff_score=cutoff_score))
-        data = data.repartition(numP)
-        user_scores = data.collectAsMap()
-        ret[filename] = user_scores
-    with open(output_path + 'base_user_scores.json', 'w') as outfile: 
+        if filename.startswith('transcribersofreddit'): 
+            user_scores = {}
+            with open(input_path + filename, 'r') as infile: 
+                for line in infile: 
+                    tup = get_usr_score(line, cutoff_score=cutoff_score)
+                    user_scores[tup[0]] = tup[1]
+        else: 
+            data = sc.textFile(input_path + filename)
+            numP = data.getNumPartitions()
+            data = data.map(partial(get_usr_score, cutoff_score=cutoff_score))
+            data = data.repartition(numP)
+            user_scores = data.collectAsMap()
+        ret[filename] = user_scores 
+    with open(output_path, 'w') as outfile: 
         json.dump(ret, outfile)
 
 def main(): 
@@ -251,9 +252,10 @@ def main():
     #user_activity()
     #count_subscribers()
     #get_active_users()
-    # TODO change back to all 400+ sr not just askreddit TODO
-    get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores/', 'most_pmi')
-    #get_user_scores_helper(LOG_DIR + 'base_user_scores/', LOG_DIR, 2.8615285178167453)
+    #get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores/', 'most_pmi')
+    #get_user_scores(LOG_DIR + 'pmi/', LOG_DIR + 'pmi_user_scores/', 'pmi')
+    #get_user_scores_helper(LOG_DIR + 'base_user_scores/', LOG_DIR + 'base_user_scores.json', 2.8615285178167453)
+    get_user_scores_helper(LOG_DIR + 'pmi_user_scores/', LOG_DIR + 'pmi_user_scores.json', 5.006313171329149)
     sc.stop()
 
 if __name__ == '__main__':
