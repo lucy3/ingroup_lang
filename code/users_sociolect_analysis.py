@@ -226,7 +226,7 @@ def predict_sociolects(sociolect_metric):
 def predict_ols(): 
     sense_cutoff = 2.8615285178167453
     type_cutoff = 5.006313171329149
-    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=False, 
+    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=True, 
                                           factor_topics=False, include_subs=False)
     X_1 = sm.add_constant(X)
     model = sm.OLS(y, X_1)
