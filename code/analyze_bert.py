@@ -121,9 +121,9 @@ def compare_word_across_subreddits(subreddit_list, word, finetuned=False):
         # can put c=color_options[i] if we want to color by subreddit        
         ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=color_options[i], \
                marker=marker_options[i], alpha=0.5, s=10, linewidths=0)
-        legend_elements.append(Line2D([0], [0], marker='o', color='w', label=sr, 
+        legend_elements.append(Line2D([0], [0], marker=marker_options[i], color='w', label=sr, 
                                    markerfacecolor=color_options[i], markersize=10))
-    ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5,-0.1), ncol=3)
+    ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5,-0.1), ncol=2)
     plt.savefig('../logs/bert_reddit_' + word + '_subreddits_' + str(finetuned) + '.png', 
         bbox_inches="tight", dpi=300) 
     plt.close()
@@ -305,12 +305,11 @@ def main():
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters20_0')
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0')
     #plot_semeval_clusters('house.n', 'semeval2010', 'semeval2010_clusters3_0_normalize') 
-    compare_word_across_subreddits(['warriors', 
-         'nba', 'cooking'], 'curry', finetuned=True)
-    compare_word_across_subreddits(['hardwareswap', 'mechmarket', 'ukpolitics', 
-         'skincareaddiction'], 'pm', finetuned=True)
-    compare_word_across_subreddits(['walmart', 'magicarena', 
-         'datingoverthirty'], 'spark', finetuned=True)
+    #compare_word_across_subreddits(['warriors', 
+    #     'nba', 'cooking'], 'curry', finetuned=True)
+    #compare_word_across_subreddits(['hardwareswap', 'mechmarket', 'ukpolitics', 
+    #     'skincareaddiction'], 'pm', finetuned=True)
+    compare_word_across_subreddits(['elitedangerous', 'cscareerquestions'], 'python', finetuned=False)
     #compare_word_across_subreddits(['boxoffice', 'overwatch', 
     #     'competitiveoverwatch', 'repsneakers', 'sneakers', 'fashionreps'], 'ow', finetuned=True)
     #compare_word_across_subreddits(['borderlands', 'swgalaxyofheroes', 'reddeadredemption', 
