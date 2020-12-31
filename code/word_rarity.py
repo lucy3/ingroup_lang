@@ -14,6 +14,7 @@ import math
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 WORD_COUNT_DIR = ROOT + 'logs/word_counts/' 
 PMI_DIR = ROOT + 'logs/pmi/'
+NORM_PMI_DIR = ROOT + 'logs/norm_pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
 SR_DATA_DIR = ROOT + 'subreddits3/' 
 LOG_DIR = ROOT + 'logs/'
@@ -64,6 +65,51 @@ def merge_counts():
         rdd = sc.parallelize(list(total_counts.iteritems()))
         df = sqlContext.createDataFrame(rdd, ['word', 'count'])
         df.write.mode('overwrite').parquet(WORD_COUNT_DIR + sr) 
+    log_file.close()
+
+def calculate_normalized_pmi(percent_param=0.2): 
+    """
+    PMI is defined as 
+    log(p(word|community) / p(word)) 
+    or 
+    log of 
+    (frequency of word in community c / # of words in community c) 
+    ______________________________________________________________ 
+    (frequency of word in all c's / total number of words)
+
+    This is then normalized by h(w, c), or
+    
+    -log p(w, c) = -log ((frequency of w in community c) / (total number of words))
+
+    as defined in Zhang et al. 2017.
+    """
+    log_file = open(LOG_DIR + 'norm_pmi.temp', 'w')
+    with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
+        total_counts = json.load(infile)
+    with open(LOG_DIR + 'total_word_count.txt', 'r') as infile: 
+        overall_total = int(infile.readline())
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        pmi_d = {}
+        if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
+            log_file.write(filename + '\n') 
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+            num_top_p = int(percent_param*len(d))
+            total_c = sum(list(d.values()))
+            for w in d.most_common(num_top_p): 
+                p_w_given_c = d[w[0]] / float(total_c)
+                p_w = total_counts[w[0]] / float(overall_total)
+                pmi = math.log(p_w_given_c / p_w)
+                h = -math.log(d[w[0]] / float(overall_total))
+                pmi_d[w[0]] = pmi / h
+            new_filename = filename.replace('.txt', '')
+            with open(NORM_PMI_DIR + new_filename + '_' + str(percent_param) + '.csv', 'w') as outfile: 
+                sorted_d = sorted(pmi_d.items(), key=operator.itemgetter(1))
+                writer = csv.writer(outfile)
+                writer.writerow(['word', 'pmi', 'count'])
+                for tup in sorted_d: 
+                    writer.writerow([tup[0], str(tup[1]), str(d[tup[0]])])
+    log_file.write("DONE\n")
     log_file.close()
 
 def calculate_pmi(percent_param=0.2): 
@@ -201,10 +247,11 @@ def word_tfidf(percent_param=0.2):
 
 def main(): 
     count_words()
-    count_overall_words()
-    calculate_pmi()
-    count_document_freq()
-    word_tfidf()
+    #count_overall_words()
+    #calculate_pmi()
+    calculate_normalized_pmi()
+    #count_document_freq()
+    #word_tfidf()
     sc.stop()
 
 if __name__ == '__main__':

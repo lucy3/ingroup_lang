@@ -1,6 +1,6 @@
 ## Python 2.7
-#from pyspark import SparkConf, SparkContext
-#from pyspark.sql import SQLContext
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'ag'
+METRIC = 'bert-base'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -42,9 +42,9 @@ elif METRIC == 'ag':
 
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-#conf = SparkConf()
-#sc = SparkContext(conf=conf)
-#sqlContext = SQLContext(sc)
+conf = SparkConf()
+sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -105,7 +105,7 @@ def calculate_pmi():
     PMI
     1) For each subreddit, filter to top 10% of words in that subreddit 
     2) Count each sense once per user per subreddit
-    3) Calculate PMI
+    3) Calculate normalized PMI
     '''
     log_file = open(LOG_DIR + 'sense_pmi.temp', 'w')
     with open(ALL_SENSES, 'r') as infile: 
@@ -126,11 +126,11 @@ def calculate_pmi():
         data = data.map(lambda tup: (tup[0][1], 1))
         data = data.reduceByKey(lambda n1, n2: n1 + n2) 
         d = Counter(data.collectAsMap())
-        pmi = Counter()
+        pmi = Counter() # Normalized
         for k in d:
             p_k_given_c = d[k] / float(subreddit_totals[filename])
             p_k = total_counts[k] / float(overall_total)
-            pmi[k] = math.log(p_k_given_c / p_k)
+            pmi[k] = math.log(p_k_given_c / p_k) / -math.log(d[k] / float(overall_total))
         with open(PMI_DIR + filename + '.csv', 'w') as outfile: 
             writer = csv.writer(outfile)
             writer.writerow(['sense', 'pmi', 'count'])
@@ -227,7 +227,7 @@ def calc_max_pmi():
 
 def main(): 
     #count_overall_senses()
-    #calculate_pmi()
+    calculate_pmi()
     
     #inspect_word('cubes', 'azurelane')
     #inspect_word('hesitation', 'sekiro')
@@ -244,11 +244,11 @@ def main():
     #inspect_word('pm')
     #inspect_word('associates')
     #inspect_word('spark')
-    inspect_word('haul', subreddit='fashionreps')
+    #inspect_word('haul', subreddit='fashionreps')
 
     #calc_max_pmi()
-    #calc_most_pmi()
-    #sc.stop()
+    calc_most_pmi()
+    sc.stop()
 
 if __name__ == '__main__':
     main()
