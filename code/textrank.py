@@ -63,7 +63,7 @@ def joincolloc(tagged):
         continue
       if (tagged[i],tagged[i+1]) in colloc_list:
         sw = 1 
-	if tagged[i][1].startswith('NN') or tagged[i+1][1].startswith('NN'):
+        if tagged[i][1].startswith('NN') or tagged[i+1][1].startswith('NN'):
           tagged1.append((tagged[i][0]+' '+tagged[i+1][0],'NN'))
         elif tagged[i][1]=='RB' or tagged[i+1][1]=='RB':
           tagged1.append((tagged[i][0]+' '+tagged[i+1][0],'RB'))
@@ -157,19 +157,19 @@ def joincollocbi(tagged):
     return tagged1
 
 blacklist = []
-fname=sys.argv[1]
+ROOT = '/mnt/data0/lucy/ingroup_lang/'
+fname= ROOT + 'subreddits_month'
 articles = os.listdir(fname)
-FOLDER = 'keywords-'+fname+'-textrank'
+FOLDER = ROOT + 'logs/keywords_textrank'
 if not os.path.exists(FOLDER): os.makedirs(FOLDER)
 
 tagged = []
 for article in articles:
-    articleFile = open(fname+'/' + article, 'r')
+    print(article)
+    articleFile = open(fname+'/' + article + '/RC_sample', 'r')
+    break
     for linee in articleFile:
       line=linee.decode('latin-1')
-      lang = langid.classify(line.strip())
-      if not lang[0]=='en':
-        continue
       sentences = nltk.sent_tokenize(line.strip())
       tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
       tagged_sentences = [tagger.tag(sentence) for sentence in tokenized_sentences]
@@ -196,16 +196,13 @@ for article in articles:
     #TODO: what about phrases?
     #TODO: part of speech filter?
     #TODO: lemmatization
-    print 'Reading articles/' + article
-    articleFile = open(fname + '/' + article, 'r')
+    print('Reading ' + fname + '/' + article + '/RC_sample')
+    articleFile = open(fname + '/' + article + '/RC_sample', 'r')
+    break
     tagged=[]
     sentences=[]
     k=0
-    for linee in articleFile:
-      line = linee.decode('latin-1')
-      lang = langid.classify(line.strip())
-      if not lang[0]=='en':
-        continue
+    for line in articleFile:
       sents = nltk.sent_tokenize(line.strip())
       tok_sents = [nltk.word_tokenize(sent) for sent in sents]
       tagged_sents = [tagger.tag(sent) for sent in tok_sents]
@@ -236,7 +233,7 @@ for article in articles:
 #              wt = float(1.0)/float(len(sentence)) # if weighting by sentence length is desired
               wt = 1
               gr.add_edge(s1,s2,weight=wt)
-            except AdditionError, e:
+            except(AdditionError, e):
               pass
 
     H=nx.Graph() 
@@ -255,7 +252,7 @@ for article in articles:
     for k, g in itertools.groupby(di, key=itemgetter(1)):
       try:
         w = str(map(itemgetter(0), g)[0])
-	w = w[:w.find('/')]
+        w = w[:w.find('/')]
         if len(w)>2 and w not in blacklist:
           if w not in dic:
             keyphraseFile.write(w.replace(' ','_') + ':' + str(k)[0:6] + '\n')
