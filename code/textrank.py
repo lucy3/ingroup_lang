@@ -33,25 +33,25 @@ def main():
     nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
     nlp.tokenizer = CustomTokenizer(nlp.vocab)
     article = sys.argv[1]
-    
+     
     print("creating graph for", article) 
     G = nx.Graph()
 
     infile = open(INFOLDER + article + '/RC_sample', 'r') 
-    for line in infile: 
-	if line.startswith('USER1USER0USER'): continue
-	doc = nlp(line)
-	comment_toks = []
-	for token in doc: 
-	    if token.pos_ in set(['ADJ', 'NOUN', 'PROPN']): 
-		 comment_toks.append(token.text.lower())
-	
-	# add edges to graph using window size of 2
-	for i in range(len(comment_toks) - 1): 
-	    w1 = comment_toks[i]
-	    w2 = comment_toks[i + 1]
-	    if not G.has_edge(w1, w2):
-		G.add_edge(w1, w2)
+    for line in infile:
+        if line.startswith('USER1USER0USER'): continue
+        doc = nlp(line)
+        comment_toks = []
+        for token in doc: 
+            if token.pos_ in set(['ADJ', 'NOUN', 'PROPN']): 
+                comment_toks.append(token.text.lower())
+
+        # add edges to graph using window size of 2
+        for i in range(len(comment_toks) - 1): 
+            w1 = comment_toks[i]
+            w2 = comment_toks[i + 1]
+            if not G.has_edge(w1, w2):
+                G.add_edge(w1, w2)
     infile.close()
     pagerank_scores = nx.pagerank(G, alpha=0.85, tol=0.0001)
     outfile = open(OUTFOLDER + article, 'w')
@@ -59,7 +59,7 @@ def main():
     writer.writerow(['word', 'textrank'])
     vals = sorted(pagerank_scores.items(), key=lambda item: item[1])
     for tup in vals: 
-	writer.writerow([tup[0], tup[1]])
+        writer.writerow([tup[0], tup[1]])
     outfile.close()
 
 
