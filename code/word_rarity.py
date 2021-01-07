@@ -16,6 +16,7 @@ WORD_COUNT_DIR = ROOT + 'logs/word_counts/'
 PMI_DIR = ROOT + 'logs/pmi/'
 NORM_PMI_DIR = ROOT + 'logs/norm_pmi/'
 TFIDF_DIR = ROOT + 'logs/tfidf/'
+JSD_DIR = ROOT + 'logs/jsd/'
 SR_DATA_DIR = ROOT + 'subreddits3/' 
 LOG_DIR = ROOT + 'logs/'
 
@@ -245,11 +246,50 @@ def word_tfidf(percent_param=0.2):
     log_file.write("DONE\n")
     log_file.close()
 
+def js_divergence(percent_param=0.2): 
+    with open(LOG_DIR + 'total_word_counts.json', 'r') as infile: 
+        total_counts = json.load(infile)
+    with open(LOG_DIR + 'total_word_count.txt', 'r') as infile: 
+        overall_total = int(infile.readline())
+
+    for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
+        jsd_d = {}
+        if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename: 
+            parquetFile = sqlContext.read.parquet(WORD_COUNT_DIR + filename + '/')
+            d = Counter(parquetFile.toPandas().set_index('word').to_dict()['count'])
+            num_top_p = int(percent_param*len(d))
+            total_c = sum(list(d.values()))
+            for w in d.most_common(num_top_p):
+                p = d[w[0]] / total_c
+                q = (total_counts[w[0]] - d[w[0]]) / (overall_total - total_c)
+                m = (p + q)/2.0 
+                if p > 0 and q > 0: 
+                    score = -m*math.log2(m) + (p*math.log2(p) + q*math.log2(q))/2.0
+                elif p > 0 and q == 0: 
+                    score = -m*math.log2(m) + p*math.log2(p)/2.0
+                elif q > 0 and p == 0: 
+                    score = -m*math.log2(m) + q*math.log2(q)/2.0
+                else: 
+                    score = 0
+                #if d[w[0]] < (total_counts[w[0]] - d[w[0]]): 
+                if p < q: 
+                    score = -score
+                jsd_d[w[0]] = score
+        new_filename = filename.replace('.txt', '')
+        with open(JSD_DIR + new_filename + '.csv', 'w') as outfile: 
+            sorted_d = sorted(jsd_d.items(), key=operator.itemgetter(1))
+            writer = csv.writer(outfile)
+            writer.writerow(['word', 'jsd', 'count'])
+            for tup in sorted_d: 
+                writer.writerow([tup[0], str(tup[1]), str(d[tup[0]])])
+
+
 def main(): 
-    count_words()
+    #count_words()
     #count_overall_words()
     #calculate_pmi()
-    calculate_normalized_pmi()
+    #calculate_normalized_pmi()
+    js_divergence()
     #count_document_freq()
     #word_tfidf()
     sc.stop()
