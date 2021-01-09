@@ -1,7 +1,7 @@
 from pyspark import SparkConf, SparkContext
 import numpy as np
 import math
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.metrics.cluster import normalized_mutual_info_score, adjusted_mutual_info_score
 #import bcubed
 from collections import defaultdict, Counter
@@ -176,6 +176,25 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, nor
         if gaps[i] >= gaps[i+1] - s[i+1]:
             return (IDs, (labels[k], centroids[k]))
     return (IDs, (labels[ks[-1]], centroids[ks[-1]]))
+
+def spectral_cluster(tup, semeval2010=False, rs=0, local_scaling=True): 
+    lemma = tup[0]
+    IDs = tup[1][0]
+    data = tup[1][1]
+    if local_scaling: 
+        # calculate omegas for every point
+        # initialize empty array A
+        # get distance between every point
+        # scale to create input X
+    else:
+        # np.exp(-d(x, x) **2)
+    # compute Laplacian using scipy's csgraph_laplacian, normed=norm_laplacian
+    # get smallest 10 eigenvalues of L, sorted by value smallest to largest
+    # get largest gap between eigenvalues, then have k = largest eigenvalue before big jump
+    # SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(X)
+    # get labels
+    # return IDs and labels
+    
 
 def get_data_size(tup): 
     token = tup[0]
