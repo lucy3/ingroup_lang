@@ -14,11 +14,12 @@ import string
 from functools import partial
 from sklearn.decomposition import PCA
 import random
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 import os.path
 from joblib import dump, load
 from nltk.stem import WordNetLemmatizer
 from sklearn.preprocessing import StandardScaler
+from scipy.sparse import csgraph
 import time
 #from pyclustering.cluster.xmeans import xmeans
 #from pyclustering.cluster.encoder import type_encoding, cluster_encoder
@@ -177,24 +178,30 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, nor
             return (IDs, (labels[k], centroids[k]))
     return (IDs, (labels[ks[-1]], centroids[ks[-1]]))
 
-def spectral_cluster(tup, semeval2010=False, rs=0, local_scaling=True): 
+def spectral_cluster(tup, semeval2010=False, rs=0): 
     lemma = tup[0]
     IDs = tup[1][0]
     data = tup[1][1]
-    if local_scaling: 
-        # calculate omegas for every point
-        # initialize empty array A
-        # get distance between every point
-        # scale to create input X
-    else:
-        # np.exp(-d(x, x) **2)
-    # compute Laplacian using scipy's csgraph_laplacian, normed=norm_laplacian
+    neighbor_rank = 7 # from local scaling paper
+    omegas = np.zeros(data.shape[0])
+    A = euclidean_distances(X, squared=True)
+    omegas = np.argsort(A)[:,7] # first index is smallest
+    A = -1*A
+    A = A / omegas[:,None]
+    A = A / omegas[None,:]
+    A = np.exp(A) # affinity matrix
+    # compute Laplacian
+    L = csgraph.laplacian(A, normed=True)
     # get smallest 10 eigenvalues of L, sorted by value smallest to largest
-    # get largest gap between eigenvalues, then have k = largest eigenvalue before big jump
-    # SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(X)
-    # get labels
-    # return IDs and labels
-    
+    ev = sorted(np.linalg.eig(L))
+    gaps = []
+    for i in range(len(ev)-1): 
+        gaps.append(ev[i+1] - ev[i])
+    # eigengap
+    k = np.argmax(gaps)
+    clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(A)
+    labels = clustering.labels_
+    return (IDs, labels)
 
 def get_data_size(tup): 
     token = tup[0]
