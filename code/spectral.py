@@ -65,10 +65,10 @@ def semeval_cluster_training(semeval2010=True, rs=0):
     conf = SparkConf()
     sc = SparkContext(conf=conf)
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_centroids/' 
+        outname = LOGS + 'spectral_results/semeval2010/' 
         data = sc.textFile(SEMEVAL2010_TRAIN_VECTORS)
     else: 
-        outname = 'semeval2013/semeval2013_centroids/'
+        outname = LOGS + 'spectral_results/semeval2013/' 
         data = sc.textFile(SEMEVAL2013_TRAIN_VECTORS)
     if semeval2010: 
         data = data.filter(semeval_lemmas_of_interest) 
@@ -85,36 +85,41 @@ def semeval_cluster_training(semeval2010=True, rs=0):
     sc.stop() 
     for tup in labels: 
         # TODO: need to save training as npy with appropriate name, and labels for each training example
+        # name should include lemma/ID and rs
         print(tup[1])
         print(tup[0])
         print(tup[2].shape)
         break
+        
+def semeval_match_nn(tup, semeval2010=True, rs=0): 
+    # TODO: need to load the correct training examples and labels 
+    lemma = tup[0]
+    IDs = tup[1][0]
+    data = np.array(tup[1][1])
+    # return needs to be same format as semeval_match_centroids() in cluster_vectors.py
 
 def semeval_cluster_test(semeval2010=True, rs=0): 
     # TODO: this whole function still needs to be adapted for spectral, was copied from cluster_vectors.py
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
-        outname = 'semeval2010/semeval2010_clusters' + str(dim_reduct) + '_' + str(rs) + '_' + str(lamb)
+        outname = LOGS + 'spectral_results/semeval2010/semeval2010_clusters_' + str(rs) 
         data = sc.textFile(SEMEVAL2010_TEST_VECTORS)
     else: 
-        outname = 'semeval2013/semeval2013_clusters' + str(dim_reduct) + '_' + str(rs) + '_' + str(lamb)
+        outname = LOGS + 'spectral_results/semeval2013/semeval2013_clusters_' + str(rs)  
         data = sc.textFile(SEMEVAL2013_TEST_VECTORS2)
-    if normalize: 
-        outname += "_normalize"
     if semeval2010: 
         data = data.filter(semeval_lemmas_of_interest) 
     else: 
         data = data.filter(semeval_words_of_interest)
     data = data.map(get_semeval_vector)
     data = data.reduceByKey(lambda n1, n2: (n1[0] + n2[0], np.concatenate((n1[1], n2[1]), axis=0)))
-    out = data.flatMap(partial(semeval_match_centroids, semeval2010=semeval2010, 
-        dim_reduct=dim_reduct, rs=rs, lamb=lamb, normalize=normalize))
+    out = data.flatMap(partial(semeval_match_nn, semeval2010=semeval2010, rs=rs))
     data.unpersist()
     data = None
     id_labels = out.collectAsMap()
     sc.stop()
-    with open(LOGS + outname, 'w') as outfile: 
+    with open(outname, 'w') as outfile: 
         for ID in id_labels: 
             label = id_labels[ID]
             small_id = ID.split('_')[-3]
