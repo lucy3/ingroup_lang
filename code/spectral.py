@@ -15,9 +15,10 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     IDs = tup[1][0]
     data = tup[1][1]
     neighbor_rank = 7 # from local scaling paper
-    omegas = np.zeros(data.shape[0])
-    A = euclidean_distances(X, squared=True)
-    omegas = np.argsort(A)[:,7] # first index is smallest
+    d = euclidean_distances(data)
+    A = np.square(d)
+    omegas = np.argsort(A)[:,neighbor_rank-1] # first index is smallest
+    omegas = d[np.arange(d.shape[0]),omegas] # d(x, x_7)
     A = -1*A
     A = A / omegas[:,None]
     A = A / omegas[None,:]
@@ -25,12 +26,14 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     # compute Laplacian
     L = csgraph.laplacian(A, normed=True)
     # get smallest 10 eigenvalues of L, sorted by value smallest to largest
-    ev = sorted(np.linalg.eig(L))
+    w, v = np.linalg.eig(L)
+    ev = sorted(w)[:10]
     gaps = []
     for i in range(len(ev)-1): 
         gaps.append(ev[i+1] - ev[i])
     # eigengap
     k = np.argmax(gaps)
+    if k <= 1: k = 2 # set a lower bound
     clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(A)
     labels = clustering.labels_
     return (IDs, labels, data)
