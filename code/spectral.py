@@ -1,6 +1,10 @@
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.sparse import csgraph
 from sklearn.cluster import SpectralClustering
+from pyspark import SparkConf, SparkContext
+import numpy as np
+from collections import defaultdict, Counter
+import time
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
@@ -62,6 +66,13 @@ def semeval_lemmas_of_interest(line):
     lemma = ID[-2].split('.')[0]
     pos = ID[-2].split('.')[1]
     return lemma == wnl.lemmatize(contents[1], pos)
+
+def get_semeval_vector(line): 
+    contents = line.strip().split('\t') 
+    ID = contents[0]
+    lemma = ID.split('_')[-2] 
+    vector = np.array([[float(i) for i in contents[2].split()]])
+    return (lemma, ([ID], vector))
 
 def semeval_cluster_training(semeval2010=True, rs=0): 
     random.seed(rs)
