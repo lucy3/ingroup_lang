@@ -33,7 +33,7 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     k = np.argmax(gaps)
     clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(A)
     labels = clustering.labels_
-    return (IDs, labels)
+    return (IDs, labels, data)
 
 def sample_vectors(tup): 
     IDs = tup[1][0]
@@ -83,7 +83,12 @@ def semeval_cluster_training(semeval2010=True, rs=0):
     data = None
     labels = out.collect()
     sc.stop() 
-    # TODO: figure out how to save labels and training examples
+    for tup in labels: 
+        # TODO: need to save training as npy with appropriate name, and labels for each training example
+        print(tup[1])
+        print(tup[0])
+        print(tup[2].shape)
+        break
 
 def semeval_cluster_test(semeval2010=True, rs=0): 
     # TODO: this whole function still needs to be adapted for spectral, was copied from cluster_vectors.py
@@ -120,7 +125,7 @@ def main():
     #for r in range(5):
     r = 0
     semeval_cluster_training(semeval2010=True, rs=r)
-    semeval_cluster_test(semeval2010=True, rs=r)
+    #semeval_cluster_test(semeval2010=True, rs=r)
 
 if __name__ == "__main__":
     main()
