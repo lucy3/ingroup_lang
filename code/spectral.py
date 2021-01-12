@@ -5,6 +5,10 @@ from pyspark import SparkConf, SparkContext
 import numpy as np
 from collections import defaultdict, Counter
 import time
+import random
+from functools import partial
+from nltk.stem import WordNetLemmatizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
@@ -13,6 +17,8 @@ SEMEVAL2010_TEST_VECTORS = LOGS + 'semeval2010/semeval2010_test_bert2'
 SEMEVAL2013_TRAIN_VECTORS = LOGS + 'semeval2013/semeval2013_train_bert2'
 SEMEVAL2013_TEST_VECTORS = LOGS + 'semeval2013/semeval2013_test_bert2'
 SEMEVAL2013_TEST_VECTORS2 = LOGS + 'semeval2013/semeval2013_test_bert3'
+
+wnl = WordNetLemmatizer()
 
 def spectral_cluster(tup, semeval2010=False, rs=0): 
     lemma = tup[0]
@@ -93,27 +99,34 @@ def semeval_cluster_training(semeval2010=True, rs=0):
     data = data.map(sample_vectors) 
     out = data.map(partial(spectral_cluster, 
          semeval2010=semeval2010, rs=rs)) 
-    data.unpersist()
-    data = None
     labels = out.collect()
     sc.stop() 
     for tup in labels: 
-        # TODO: need to save training as npy with appropriate name, and labels for each training example
-        # name should include lemma/ID and rs
-        print(tup[1])
-        print(tup[0])
-        print(tup[2].shape)
-        break
+        labels = tup[1]
+        lemma = tup[0][0].split('_')[-2]
+        data = tup[2]
+        prefix = outname + lemma + '_' + str(rs)
+        with open(prefix + '_trainlabels.txt', 'w') as outfile: 
+            for label in labels: 
+                outfile.write(str(label) + '\n')
+        with open(prefix + '_traindata.npy', 'w') as outfile:
+            np.save(outfile, data)
         
 def semeval_match_nn(tup, semeval2010=True, rs=0): 
-    # TODO: need to load the correct training examples and labels 
     lemma = tup[0]
     IDs = tup[1][0]
     data = np.array(tup[1][1])
-    # return needs to be same format as semeval_match_centroids() in cluster_vectors.py
+    # TODO: load up train_labels based on lemma or ID
+    # TODO: load up training examples
+    sim = cosine_similarity(data, train_data)
+    max_idx = np.argmax(sim, axis=1)
+    labels = [train_labels[i] for i in max_idx]  
+    ret = []
+    for i in range(len(IDs)): 
+        ret.append((IDs[i], labels[i]))
+    return ret
 
 def semeval_cluster_test(semeval2010=True, rs=0): 
-    # TODO: this whole function still needs to be adapted for spectral, was copied from cluster_vectors.py
     conf = SparkConf()
     sc = SparkContext(conf=conf) 
     if semeval2010: 
