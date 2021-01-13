@@ -20,7 +20,7 @@ do
 
             IFS=':' read -ra fscore_parts <<< "$fscore"
             IFS=':' read -ra vmeasure_parts <<< "$vmeasure"
-            avg=$(awk "BEGIN {print (${fscore_parts[1]}+${vmeasure_parts[1]})/2; exit}")
+            avg=$(awk "BEGIN {print sqrt(${fscore_parts[1]}*${vmeasure_parts[1]}); exit}")
             echo ${fscore_parts[1]} >> "fscores.temp"
             echo ${vmeasure_parts[1]} >> "vmeasures.temp"
             echo $avg >> "average.temp"
