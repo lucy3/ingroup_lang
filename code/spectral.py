@@ -19,6 +19,7 @@ SEMEVAL2013_TEST_VECTORS = LOGS + 'semeval2013/semeval2013_test_bert2'
 SEMEVAL2013_TEST_VECTORS2 = LOGS + 'semeval2013/semeval2013_test_bert3'
 
 wnl = WordNetLemmatizer()
+np.seterr(all='raise')
 
 def spectral_cluster(tup, semeval2010=False, rs=0): 
     lemma = tup[0]
@@ -29,6 +30,9 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     A = np.square(d)
     omegas = np.argsort(A)[:,neighbor_rank-1] # first index is smallest
     omegas = d[np.arange(d.shape[0]),omegas] # d(x, x_7)
+    zeros = np.where(omegas == 0)[0]
+    if len(zeros) > 0: 
+        print("---------------- ZEROS", omegas) 
     A = -1*A
     A = A / omegas[:,None]
     A = A / omegas[None,:]
@@ -109,8 +113,7 @@ def semeval_cluster_training(semeval2010=True, rs=0):
         with open(prefix + '_trainlabels.txt', 'w') as outfile: 
             for label in labels: 
                 outfile.write(str(label) + '\n')
-        with open(prefix + '_traindata.npy', 'w') as outfile:
-            np.save(outfile, data)
+        np.save(prefix + '_traindata.npy', data)
         
 def semeval_match_nn(tup, semeval2010=True, rs=0): 
     lemma = tup[0]
