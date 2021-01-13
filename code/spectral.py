@@ -9,6 +9,8 @@ import random
 from functools import partial
 from nltk.stem import WordNetLemmatizer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import kneighbors_graph
+import math
 
 ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 LOGS = ROOT + 'logs/'
@@ -25,20 +27,9 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     lemma = tup[0]
     IDs = tup[1][0]
     data = tup[1][1]
-    neighbor_rank = 7 # from local scaling paper
-    d = euclidean_distances(data)
-    A = np.square(d)
-    omegas = np.argsort(d)[:,neighbor_rank-1] # first index is smallest
-    omegas = d[np.arange(d.shape[0]),omegas] # d(x, x_7)
-    zeros = np.where(omegas == 0)[0]
-    if len(zeros) > 0: 
-        print("---------------- ZEROS", omegas)
-        print("-------------------------")
-        print(d[np.where(omegas==0), :])
-    A = -1*A
-    A = A / omegas[:,None]
-    A = A / omegas[None,:]
-    A = np.exp(A) # affinity matrix
+    neighbors = int(math.ceil(math.log(data.shape[0]) + 1))
+    connectivity = kneighbors_graph(data, n_neighbors=neighbors, include_self=True)
+    A = 0.5 * (connectivity + connectivity.T)
     # compute Laplacian
     L = csgraph.laplacian(A, normed=True)
     # get smallest 10 eigenvalues of L, sorted by value smallest to largest
@@ -49,8 +40,9 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     for i in range(len(ev)-1): 
         gaps.append(ev[i+1] - ev[i])
     # eigengap
-    k = np.argmax(gaps)
-    if k <= 1: k = 2 # set a lower bound
+    k = np.argmax(gaps) + 1
+    if k <= 1: 
+        k = 2 # set a lower bound
     clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(A)
     labels = clustering.labels_
     return (IDs, labels, data)
