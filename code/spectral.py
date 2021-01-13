@@ -28,11 +28,13 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     neighbor_rank = 7 # from local scaling paper
     d = euclidean_distances(data)
     A = np.square(d)
-    omegas = np.argsort(A)[:,neighbor_rank-1] # first index is smallest
+    omegas = np.argsort(d)[:,neighbor_rank-1] # first index is smallest
     omegas = d[np.arange(d.shape[0]),omegas] # d(x, x_7)
     zeros = np.where(omegas == 0)[0]
     if len(zeros) > 0: 
-        print("---------------- ZEROS", omegas) 
+        print("---------------- ZEROS", omegas)
+        print("-------------------------")
+        print(d[np.where(omegas==0), :])
     A = -1*A
     A = A / omegas[:,None]
     A = A / omegas[None,:]
@@ -42,6 +44,7 @@ def spectral_cluster(tup, semeval2010=False, rs=0):
     # get smallest 10 eigenvalues of L, sorted by value smallest to largest
     w, v = np.linalg.eig(L)
     ev = sorted(w)[:10]
+    print("************* eigenvalues", lemma, ev)
     gaps = []
     for i in range(len(ev)-1): 
         gaps.append(ev[i+1] - ev[i])
