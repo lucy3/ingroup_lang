@@ -292,6 +292,23 @@ def plot_semeval_clusters(lemma, dataset, cluster_path):
         ax.scatter(X_embedded[idx,0], X_embedded[idx,1], c=colors, marker=marker_options[i])
     plt.savefig('../logs/bert_' + lemma + '_' + dataset + '_' + cluster_path + '.png')
 
+def viz_semeval_clusters(lemma): 
+    color_options = ['tab:blue', 'tab:orange', 'tab:green', 
+         'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 
+         'tab:gray', 'tab:olive', 'tab:cyan']
+
+    inpath = '../logs/spectral_results/semeval2010/'
+    train_data = np.load(inpath + lemma + '_0_traindata.npy')
+    train_labels = []
+    with open(inpath + lemma + '_0_trainlabels.txt', 'r') as infile: 
+        for line in infile: 
+            train_labels.append(int(line.strip()))
+    colors = [color_options[train_labels[i]] for i in range(len(train_labels))]
+    X_embedded = TSNE(n_components=2, n_jobs=-1).fit_transform(train_data)
+    fig, ax = plt.subplots()
+    ax.scatter(X_embedded[:,0], X_embedded[:,1], c=colors, alpha=0.3, marker='.')
+    plt.savefig('../logs/plots/' + lemma.replace('.', '-') + '.png')
+
 def main():
     #sanity_check()
     #compare_word_across_subreddits(['vegan', 'financialindependence', 'fashionreps', 'keto', 'applyingtocollege'], '!')
@@ -309,13 +326,17 @@ def main():
     #     'nba', 'cooking'], 'curry', finetuned=True)
     #compare_word_across_subreddits(['hardwareswap', 'mechmarket', 'ukpolitics', 
     #     'skincareaddiction'], 'pm', finetuned=True)
-    compare_word_across_subreddits(['elitedangerous', 'cscareerquestions'], 'python', finetuned=False)
+    #compare_word_across_subreddits(['elitedangerous', 'cscareerquestions'], 'python', finetuned=False)
     #compare_word_across_subreddits(['boxoffice', 'overwatch', 
     #     'competitiveoverwatch', 'repsneakers', 'sneakers', 'fashionreps'], 'ow', finetuned=True)
     #compare_word_across_subreddits(['borderlands', 'swgalaxyofheroes', 'reddeadredemption', 
     #   'reddeadonline', 'starwars', 'starwars'], 'hunters', finetuned=True)
     #compare_word_across_subreddits(['borderlands', 'sekiro', 'boardgames', 
     #   'thedivision', 'destinythegame'], 'hunters', finetuned=False)
+    viz_semeval_clusters('officer.n')
+    viz_semeval_clusters('cell.n')
+    viz_semeval_clusters('signal.v')
+    viz_semeval_clusters('figure.v')
     #sc.stop()
 
 if __name__ == '__main__': 
