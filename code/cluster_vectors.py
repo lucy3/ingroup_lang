@@ -177,6 +177,7 @@ def kmeans_with_gap_statistic(tup, dim_reduct=None, semeval2010=False, rs=0, nor
             return (IDs, (labels[k], centroids[k]))
     return (IDs, (labels[ks[-1]], centroids[ks[-1]]))
 
+
 def get_data_size(tup): 
     token = tup[0]
     data = tup[1][1]
