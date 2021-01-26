@@ -85,7 +85,7 @@ def get_data(sense_cutoff, type_cutoff, include_topics=False, factor_topics=Fals
     X = []
     y = []
     y_bin = []
-    type_path = root + '/logs/pmi/'
+    type_path = root + '/logs/norm_pmi/'
     if ag: 
         sense_path = root + 'logs/ag_most_sense_pmi/'
     else:
@@ -135,7 +135,7 @@ def get_data_old(sociolect_metric, cut_off, include_subs=False):
     y_bin = []
     count_cut_off = 0
     if sociolect_metric == 'pmi': 
-        path = root + '/logs/pmi/'
+        path = root + '/logs/norm_pmi/'
     elif sociolect_metric == 'tfidf': 
         path = root + '/logs/tfidf/'
     elif sociolect_metric == 'ag_most_pmi': 
@@ -224,9 +224,9 @@ def predict_sociolects(sociolect_metric):
     print
 
 def predict_ols(): 
-    sense_cutoff = 2.8615285178167453
-    type_cutoff = 5.006313171329149
-    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=True, 
+    sense_cutoff = 0.17994827737953864
+    type_cutoff = 0.3034868476499491
+    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=False, 
                                           factor_topics=False, include_subs=False)
     X_1 = sm.add_constant(X)
     model = sm.OLS(y, X_1)
@@ -250,8 +250,8 @@ def u_tests(sociolect_metric=None):
     less sociolect-y communities are larger, less active, less loyal, less dense
     '''
     # values copied from "senses" Python Notebook
-    base_scs = [0.2789802191673347, 0.48007543419270565, 0.7324234063287886, 1.0796816376343343, 1.646291431133463, 2.8615285178167453]
-    tcs = [0.14368642975619209, 0.3675468465645889, 0.6636654082573912, 1.110993113597629, 2.016327239070056, 5.006313171329149]
+    base_scs = [0.0172226043675457, 0.029333511361664382, 0.04439566287200495, 0.06524046644385789, 0.10001508696572367, 0.17994827737953864, 0.2144383944959922]
+    tcs = [0.008950423272301661, 0.02261513150464957, 0.04037423905310003, 0.06720029386461164, 0.12191657724645635, 0.3034868476499491, 0.3517743621999161]
     #tcs = [5.006313171329149] 
     #ag_scs = [2.66291875427572]
     #base_scs = [2.8615285178167453]
