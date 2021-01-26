@@ -1,6 +1,6 @@
 ## Python 2.7
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
+#from pyspark import SparkConf, SparkContext
+#from pyspark.sql import SQLContext
 import json
 import os
 import csv
@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
-METRIC = 'bert-base'
+METRIC = 'ag'
 if METRIC == 'finetuned':  
     PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
@@ -42,9 +42,9 @@ elif METRIC == 'ag':
 
 VOCAB_DIR = ROOT + 'logs/sr_sense_vocab/'
 
-conf = SparkConf()
-sc = SparkContext(conf=conf)
-sqlContext = SQLContext(sc)
+#conf = SparkConf()
+#sc = SparkContext(conf=conf)
+#sqlContext = SQLContext(sc)
 
 def user_sense(line): 
     contents = line.strip().split('\t') 
@@ -227,7 +227,7 @@ def calc_max_pmi():
 
 def main(): 
     #count_overall_senses()
-    calculate_pmi()
+    #calculate_pmi()
     
     #inspect_word('cubes', 'azurelane')
     #inspect_word('hesitation', 'sekiro')
@@ -245,10 +245,11 @@ def main():
     #inspect_word('associates')
     #inspect_word('spark')
     #inspect_word('haul', subreddit='fashionreps')
+    inspect_word('.')
 
     #calc_max_pmi()
-    calc_most_pmi()
-    sc.stop()
+    #calc_most_pmi()
+    #sc.stop()
 
 if __name__ == '__main__':
     main()

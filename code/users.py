@@ -252,10 +252,10 @@ def main():
     #user_activity()
     #count_subscribers()
     #get_active_users()
-    #get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores/', 'most_pmi')
-    #get_user_scores(LOG_DIR + 'pmi/', LOG_DIR + 'pmi_user_scores/', 'pmi')
-    #get_user_scores_helper(LOG_DIR + 'base_user_scores/', LOG_DIR + 'base_user_scores.json', 2.8615285178167453)
-    get_user_scores_helper(LOG_DIR + 'pmi_user_scores/', LOG_DIR + 'pmi_user_scores.json', 5.006313171329149)
+    get_user_scores(LOG_DIR + 'base_most_sense_pmi/', LOG_DIR + 'base_user_scores/', 'most_pmi')
+    get_user_scores(LOG_DIR + 'norm_pmi/', LOG_DIR + 'pmi_user_scores/', 'pmi')
+    #get_user_scores_helper(LOG_DIR + 'base_user_scores/', LOG_DIR + 'base_user_scores.json', 0.17994827737953864)
+    #get_user_scores_helper(LOG_DIR + 'pmi_user_scores/', LOG_DIR + 'pmi_user_scores.json', 0.3034868476499491)
     sc.stop()
 
 if __name__ == '__main__':
