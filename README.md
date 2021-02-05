@@ -1,3 +1,5 @@
+# Reddit Language Variation
+
 Code for the TACL paper, _Characterizing English Variation across Social Media Communities with BERT_. Citation forthcoming. 
 
 Lucy is currently adding comments and more information about this repo for easier use. 
