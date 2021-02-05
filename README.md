@@ -73,5 +73,8 @@ Community behavior analysis
 ### Data
 We used two months of data, May and June 2019, from (Pushshift's collection of Reddit comments)[https://files.pushshift.io/reddit/comments/]. 
 If you would like the sampled comments (80k per subreddit) that Lucy used, email her since they are too big for Github. 
+
+Include details on files in data folder, and SemEval data. 
+
 ### Logs
 This folder contains some of the outputs. 
