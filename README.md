@@ -25,23 +25,33 @@ Data preprocessing, wrangling, and organizing
 - rm\_dups\_single\_user.py (deprecated, to be deleted)
 - run\_lm\_finetuning.py: (deprecated, to be deleted... we used Google's original BERT code instead) 
 - slow\_tokenizer.py (possibly deprecated)
+- stanford\_sspliter.sh (possibly deprecated)
+- stanford_tokenizer.sh (possibly deprecated)
+- tokenizer.sh
+- tokenizer\_helper.py
+- tokenizer\_helper\_mwes.py (possibly deprecated)
+- user\_parallel\_tokenizer.sh (deprecated over a year ago, to be deleted)
+- user\_remove\_duplicates.sh (deprecated over a year ago, to be deleted)
 
 SemEval experiments
 - bert\_vectors.py: get BERT embeddings
 - bert\_post.py: piece together wordpiece vectors to create semeval2010_train_bert2 and semeval2010_test_bert2 files
 - cluster\_vectors.py
 
-k-means clustering and matching of word embeddings on Reddit data
+Clustering and matching of word embeddings on Reddit data
 - bert\_cluster\_train.py: clustering 1 word at a time
 - bert\_cluster\_match.py: matching 1 subreddit at a time
 - analyze\_bert.py: visualization
 - playground.ipynb (purpose unclear, to be potentially deleted or merged with another notebook)
+- spectral.py
 
 Amrami & Goldberg fork 
 - link to public forked repo to be included here
 
 Community language metrics
 - sense\_pmi.py
+- textrank.py
+- word\_rarity.py
 
 Glossary analysis
 - glossary\_eval.py
@@ -51,6 +61,9 @@ Community behavior analysis
 - comment\_networks.py
 - comment\_networks\_helper.py
 - loyalty.py
+- sociolect\_score\_analysis.ipynb
+- users.py
+- users\_sociolect\_analysis.py
 
 ### Data
 We used two months of data, May and June 2019, from (Pushshift's collection of Reddit comments)[https://files.pushshift.io/reddit/comments/]. 
