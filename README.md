@@ -7,6 +7,9 @@ Lucy is currently adding comments and more information about this repo for easie
 The name of this repository if "ingroup_lang" since it is about in-group language. 
 
 ### Package versions
+
+To be added. 
+
 ## Repository Map
 ### Code
 This part is under construction, to be cleaned up for readibility :) 
