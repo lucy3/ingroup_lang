@@ -50,8 +50,9 @@ Clustering and matching of word embeddings on Reddit data
 - playground.ipynb (purpose unclear, to be potentially deleted or merged with another notebook)
 - spectral.py
 
-Amrami & Goldberg fork 
-- link to public forked repo to be included here
+Amrami & Goldberg 2019 fork 
+- [The repo here](https://github.com/lucy3/bertwsi)
+- Thank you to Asaf Amrami for making your code accessible 
 
 Community language metrics
 - sense\_pmi.py
