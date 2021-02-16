@@ -1,6 +1,8 @@
 '''
 Tokenizes using BERT BasicTokenizer
 and removes duplicates for each user.
+
+Called by tokenizer.sh 
 '''
 
 from transformers import BasicTokenizer

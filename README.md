@@ -12,9 +12,6 @@ To be added.
 
 ## Repository Map
 ### Code
-This part is under construction, to be cleaned up for readibility :) 
-
-Each file will be further commented at the top with details on inputs and purpose. The code will be further distilled down to the main methods and experiments presented in the final paper. It is currently a collection of everything Lucy has ever coded for this project. 
 
 **Data preprocessing, wrangling, and organizing**
 - data\_organize.py
@@ -27,8 +24,8 @@ Each file will be further commented at the top with details on inputs and purpos
 - tokenizer\_helper.py
 
 **SemEval experiments**
-- bert\_vectors.py: get BERT embeddings
-- bert\_post.py: piece together wordpiece vectors to create semeval2010_train_bert2 and semeval2010_test_bert2 files
+- bert\_vectors.py
+- bert\_post.py
 - cluster\_vectors.py
 
 **Clustering and matching of word embeddings on Reddit data**

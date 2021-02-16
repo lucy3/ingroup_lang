@@ -1,3 +1,7 @@
+'''
+We get the language of every comment in a subreddit. 
+'''
+
 import json
 import time
 from tqdm import tqdm
