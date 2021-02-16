@@ -65,7 +65,7 @@ If you would like the sampled comments (80k per subreddit) that Lucy used, email
 
 Include details on files in data folder, and SemEval data. 
 
-Subreddit glossaries can be found [here](https://docs.google.com/spreadsheets/d/1D8TGIxTyMARK5Cr6Ez8SmHkvxURGgvwvIfw6Uq8fcKo/edit?usp=sharing). 
+Subreddit glossaries, as csvs, are also in this folder. 
 
 ### Logs
 This folder contains some of the outputs. 
