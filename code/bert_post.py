@@ -1,5 +1,6 @@
 """
-Piece together wordpiece vectors
+Piece together wordpiece vectors to create semeval2010_train_bert2 
+and semeval2010_test_bert2 files
 """
 import numpy as np
 import sys

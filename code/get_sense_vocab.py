@@ -1,5 +1,5 @@
 """
-File for getting vocab of words we want to get senses for
+This script gets the vocab of words we want to get senses for
 """
 
 import os
@@ -25,8 +25,11 @@ sqlContext = SQLContext(sc)
 
 def save_sr_vocab(percent_param): 
     '''
-    for each subreddit, save the top percent_param*100% 
-    of words into a file
+    For each subreddit, save the top percent_param*100% 
+    of words into a file. This means we only induce senses
+    for a subreddit's own vocab. It's possible that a word
+    in the top 10% of one subreddit won't be in the top 10% of another, 
+    but it'll still be included in the overall vocab. 
     '''
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
         if os.path.isdir(WORD_COUNT_DIR + filename) and '@' not in filename:  
@@ -43,6 +46,9 @@ def get_vocab(percent_param, N):
     '''
     Get words in top percent_param of subreddits
     that appear in at least N subreddits 
+    
+    This outputs a file of the format
+    word, number of times it occurs overall, number of subreddits it occurs in
     '''
     vocab_map = defaultdict(list) # word : [subreddit]
     for filename in sorted(os.listdir(WORD_COUNT_DIR)): 
@@ -74,6 +80,9 @@ def get_vocab(percent_param, N):
                          ',' + str(vocab_subreddits[w]) + '\n')
             
 def comments_with_vocab(vocab_file): 
+    '''
+    Examines the number of comments that contain words in our vocabulary
+    '''
     vocab = set()
     with open(vocab_file, 'r') as infile: 
         for line in infile: 
@@ -111,6 +120,10 @@ def get_vocab_overlap(vocab1_path, vocab2_path):
     print("OVERLAP between", vocab1_path, vocab2_path, "is:", len(vocab1 & vocab2))
 
 def find_missing_words(): 
+    '''
+    This was probably used to realize that
+    emojis are not very friendly to BERT and were often missing. 
+    '''
     with open(LOG_DIR + 'vocabs/vocab_map.json', 'r') as infile: 
         d = json.load(infile)
     ids = {}
@@ -144,13 +157,8 @@ def approximate_num_matches():
     print("AVERAGE NUM MATCHES", np.mean(overlaps))
         
 def main(): 
-    #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/20_100')
-    #get_vocab_overlap(LOG_DIR + 'vocabs/10_20', LOG_DIR + 'vocabs/3_1_filtered')
-    #comments_with_vocab(LOG_DIR + 'vocabs/3_1_filtered')
     get_vocab(0.1, 1)
     save_sr_vocab(0.1)
-    #find_missing_words()
-    #approximate_num_matches()
     sc.stop()
 
 if __name__ == "__main__":
