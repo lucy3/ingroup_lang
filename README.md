@@ -60,12 +60,12 @@ Each file will be further commented at the top with details on inputs and purpos
 - users\_sociolect\_analysis.py
 
 ### Data
-We used two months of data, May and June 2019, from (Pushshift's collection of Reddit comments)[https://files.pushshift.io/reddit/comments/]. 
+We used two months of data, May and June 2019, from [Pushshift's collection of Reddit comments](https://files.pushshift.io/reddit/comments/). 
 If you would like the sampled comments (80k per subreddit) that Lucy used, email her since they are too big for Github. 
 
 Include details on files in data folder, and SemEval data. 
 
-Subreddit glossaries can be found (here)[https://docs.google.com/spreadsheets/d/1D8TGIxTyMARK5Cr6Ez8SmHkvxURGgvwvIfw6Uq8fcKo/edit?usp=sharing]. 
+Subreddit glossaries can be found [here](https://docs.google.com/spreadsheets/d/1D8TGIxTyMARK5Cr6Ez8SmHkvxURGgvwvIfw6Uq8fcKo/edit?usp=sharing). 
 
 ### Logs
 This folder contains some of the outputs. 
