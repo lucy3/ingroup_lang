@@ -19,24 +19,12 @@ Each file will be further commented at the top with details on inputs and purpos
 **Data preprocessing, wrangling, and organizing**
 - data\_organize.py
 - dataset\_statistics.py
-- data\_splitter.py (deprecated over a year ago, to be deleted)
 - get\_sense\_vocab.py
 - langid.py
 - language\_id.py
 - language\_id\_helper.py
-- mwe_discovery.py (not used, to be deleted)
-- partial\_tokenizer.sh (deprecated over a year ago, to be deleted)
-- remove\_duplicates.py
-- rm\_dups\_single\_user.py (deprecated, to be deleted)
-- run\_lm\_finetuning.py: (deprecated, to be deleted... we used Google's original BERT code instead) 
-- slow\_tokenizer.py (possibly deprecated)
-- stanford\_sspliter.sh (possibly deprecated)
-- stanford_tokenizer.sh (possibly deprecated)
 - tokenizer.sh
 - tokenizer\_helper.py
-- tokenizer\_helper\_mwes.py (possibly deprecated)
-- user\_parallel\_tokenizer.sh (deprecated over a year ago, to be deleted)
-- user\_remove\_duplicates.sh (deprecated over a year ago, to be deleted)
 
 **SemEval experiments**
 - bert\_vectors.py: get BERT embeddings
@@ -76,6 +64,8 @@ We used two months of data, May and June 2019, from (Pushshift's collection of R
 If you would like the sampled comments (80k per subreddit) that Lucy used, email her since they are too big for Github. 
 
 Include details on files in data folder, and SemEval data. 
+
+Subreddit glossaries can be found (here)[https://docs.google.com/spreadsheets/d/1D8TGIxTyMARK5Cr6Ez8SmHkvxURGgvwvIfw6Uq8fcKo/edit?usp=sharing]. 
 
 ### Logs
 This folder contains some of the outputs. 
