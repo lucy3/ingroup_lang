@@ -66,6 +66,8 @@ TODO: include links to semeval 2013 and semeval 2010 WSI datasets.
 
 Subreddit glossaries, as csvs, are also in this folder. 
 
+TODO: list of subreddits, # of users, # of subscribers, # of comments, # of comments per user
+
 ### Logs
 This folder contains some of the outputs. 
 
