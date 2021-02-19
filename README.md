@@ -9,8 +9,11 @@ The name of this repository if "ingroup_lang" since it is about in-group languag
 ### Package versions
 
 Spark 2.4.3
+
 PyTorch 1.6.0
+
 Transformers 3.3.1
+
 Python 3.7 
 
 See requirements.txt for more details. Some code from early on in the project may be in Python 2.7, but I have tried to upgrade all instances to Python 3.7, but may have missed some, just let me know. 
