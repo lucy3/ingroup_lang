@@ -1,6 +1,9 @@
 """
 Piece together wordpiece vectors to create semeval2010_train_bert2 
 and semeval2010_test_bert2 files
+
+Input: output from bert_vectors.py
+Output: input for cluster_vectors.py
 """
 import numpy as np
 import sys

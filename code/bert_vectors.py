@@ -1,3 +1,9 @@
+'''
+Getting vectors for SemEval train and test sets 
+I did not end up using this file to run on Reddit 
+data because the way it was set up
+makes it so that it is too slow on larger datasets
+'''
 import os,sys,argparse
 from transformers import BertTokenizer, BertModel
 import torch
@@ -309,8 +315,6 @@ def run_bert_on_semeval(test=False, twentyten=False, only_save_lemmas=False, com
 
  
 def main(): 
-    #run_bert_on_reddit()
-
     run_bert_on_semeval(test=False, twentyten=True, only_save_lemmas=True)
     run_bert_on_semeval(test=True, twentyten=True, only_save_lemmas=True)
 

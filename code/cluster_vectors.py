@@ -1,3 +1,11 @@
+'''
+For running k-means on SemEval train and test data
+It also contains some other variants of k-means
+that I had experimented with 
+
+Input to this file is output from bert_vectors.py
+and bert_post.py
+'''
 from pyspark import SparkConf, SparkContext
 import numpy as np
 import math
@@ -254,6 +262,7 @@ def find_semeval_dups(semeval2010=False):
 def get_dup_mapping(): 
     """
     Figure out which word (first, second, etc) is the actual target
+    Sometimes the target word appears multiple times in an example. 
     """
     nlp = spacy.load("en_core_web_sm")
     dups = set()
@@ -299,6 +308,9 @@ def filter_semeval2013_vecs():
     outfile.close()
 
 def sample_vectors(tup): 
+    '''
+    Sample 500 examples
+    '''
     IDs = tup[1][0]
     X = np.array(tup[1][1])
     cutoff = 500

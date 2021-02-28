@@ -2,6 +2,8 @@
 File for use with parallel where each word's 500
 instances are passed through BERT and clustered
 
+This clusters one word at a time (as an argument)
+
 Functions are copied from
 bert_vectors.py
 cluster_vectors.py

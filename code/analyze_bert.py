@@ -1,5 +1,8 @@
 """
-Note: just run Spark locally
+This script has a lot of functions
+I used for visualizing clusters. 
+
+To visualize things, use the viz=True flag in bert_cluster_match.py
 """
 
 #from pyspark import SparkConf, SparkContext
@@ -40,6 +43,9 @@ def get_instance_vectors(line):
     return (small_id, vec)
 
 def sanity_check():
+    '''
+    This function visualizes a few words in one subreddit. 
+    '''
     print("RUNNING SANITY CHECK") 
     subreddit = 'vegan'
     path = VEC_FOLDER + subreddit
@@ -84,6 +90,9 @@ def compare_word_across_subreddits(subreddit_list, word, finetuned=False):
     for each word and each subreddit (since we don't want to
     waste time saving every vector, only ones we care about
     for some visualization)
+
+    - subreddit_list: list of subreddit names
+    - word that we want to compare 
     '''
     #marker_options = ['o', 's', 's', 'D', 'D', 'D', 'P', '*', '^', '>']
     marker_options = ['o', 's', 'D', 'P', '*', '^', '>']
