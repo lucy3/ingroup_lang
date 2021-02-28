@@ -1,3 +1,8 @@
+'''
+Experiments with spectral clustering
+of BERT embeddings on SemEval datasets
+Some functions are copied from cluster_vectors.py
+'''
 from sklearn.metrics.pairwise import euclidean_distances, pairwise_kernels
 from scipy.sparse import csgraph
 from sklearn.cluster import SpectralClustering
