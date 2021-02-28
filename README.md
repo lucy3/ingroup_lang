@@ -34,7 +34,6 @@ See requirements.txt for more details. Some code from early on in the project ma
 - bert\_cluster\_train.py: clustering 1 word at a time
 - bert\_cluster\_match.py: matching 1 subreddit at a time
 - analyze\_bert.py: visualization
-- playground.ipynb (purpose unclear, to be potentially deleted or merged with another notebook)
 - spectral.py
 
 **Amrami & Goldberg 2019 fork**
