@@ -1,3 +1,7 @@
+'''
+We filter out non-English subreddits. 
+'''
+
 import json 
 import shutil
 LOG_DIR = '/data0/lucy/ingroup_lang/logs/'
@@ -24,16 +28,16 @@ def get_nonenglish_sr():
                 outfile.write(sr + '\n') 
 
 def move_nonenglish_sr(): 
-   non_english_subreddits = set()
-   with open(DATA + 'non_english_sr.txt', 'r') as infile: 
-       for line in infile: 
-           non_english_subreddits.add(line.strip().lower())
-   for sr in non_english_subreddits: 
-       shutil.move(SR_MONTHS + sr, NOTENG + sr)
+    non_english_subreddits = set()
+    with open(DATA + 'non_english_sr.txt', 'r') as infile: 
+        for line in infile: 
+            non_english_subreddits.add(line.strip().lower())
+    for sr in non_english_subreddits: 
+        shutil.move(SR_MONTHS + sr, NOTENG + sr)
 
 def main(): 
-   #get_nonenglish_sr()
-   move_nonenglish_sr()
+    get_nonenglish_sr()
+    move_nonenglish_sr()
         
 if __name__ == '__main__':
     main()

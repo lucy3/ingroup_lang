@@ -1,7 +1,8 @@
 '''
 Tokenizes using BERT BasicTokenizer
 and removes duplicates for each user.
-Use this instead of stanford_tokenizer.sh and remove_duplicates.sh
+
+Called by tokenizer.sh 
 '''
 
 from transformers import BasicTokenizer

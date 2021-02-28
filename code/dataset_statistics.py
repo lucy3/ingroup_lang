@@ -1,3 +1,7 @@
+'''
+Some calculations for the size of the Reddit dataset
+'''
+
 import os
 from collections import Counter
 import matplotlib
@@ -36,6 +40,9 @@ def get_comment_length():
         json.dump(d, outfile)
 
 def get_num_tokens(): 
+    '''
+    Get the total number of tokens 
+    '''
     d = 0
     tokenizer = BasicTokenizer(do_lower_case=True)
     for sr in os.listdir(SR_FOLDER_MONTH):
@@ -46,6 +53,11 @@ def get_num_tokens():
     print("Total number of tokens:", d)
     
 def count_comments(): 
+    '''
+    Count the number of comments per subreddit. 
+    
+    Output: subreddit, number of comments, number of users
+    '''
     comment_count = Counter()
     user_count = Counter()
     for sr in os.listdir(SR_FOLDER_MONTH): 
@@ -62,24 +74,13 @@ def count_comments():
     with open(LOGS + 'dataset_statistics_comments.txt', 'w') as outfile: 
         for tup in comment_count.most_common(): 
             outfile.write(tup[0] + '\t' + str(tup[1]) + '\t' + str(user_count[tup[0]]) + '\n')
-
-
-def get_related_subreddits(): 
-    affixes = ['true', 'plus', 'circlejerk', 'shitty', 'funny', 'lol', 'bad', 'post', 'ex', 'meta', 'anti', 'srs', 'classic', 'fantasy', 'indie', 'folk', 'casual', 'dirty', 'classic', 'metal', 'academic', '90s', 'free', 'social', 'nsfw ', 'nsfw', 'asian', 'trees', 'gonewild', 'gw', 'r4r', 'tree', 'ask', 'help', 'learn', 'advice', 'hacks', 'stop', 'exchange', 'randomactsof', 'trade', 'trades', 'classifieds', 'market', 'swap', 'random acts of ', 'requests', 'invites', 'builds', 'making', 'mining', 'craft', 'uk', 'reddit', 'chicago', 'us', 'dc', 'steam', 'canada', 'american', 'boston', 'android', 'online', 'web', 'porn', 'pics', 'music', 'memes', 'videos', 'vids', 'comics', 'apps', 'games', 'gaming', 'game', 'science', 'news', 'dev', 'servers', 'tech', 'tv', 'guns', 'recipes', 'city', 'u', 'college', 'man', 'girls', 's', 'al', 'ing', 'the', 'alternative', '2', '3', '4', '5', 'ism', 'n', 'an'] 
-    subreddits = set(os.listdir(SR_FOLDER_MONTH))
-    for sr in subreddits: 
-        for a in affixes: 
-            if a + sr in subreddits:
-                print(sr, a + sr)
-            if sr + a in subreddits: 
-                print(sr, sr + a)
                 
 def main(): 
     #get_comment_length()
     #count_comments()
     #get_num_tokens()
-    get_related_subreddits()
     #sc.stop()
+    pass
 
 if __name__ == "__main__":
     main()

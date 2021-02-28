@@ -2,7 +2,13 @@
 Functions for organizing or reformatting 
 Reddit data.
 
-Python 2.7, 
+Examples of things covered in this script: 
+- Counting the number of comments
+- Creating separate documents for each subreddit
+- Formatting training/test data for WSI, such as 
+   sampling 500 examples of each vocab word for sense clustering
+
+Python 2.7, since this was an early document in this project. 
 
 though if you use stanfordnlp you should
 use Python 3. 
@@ -22,7 +28,6 @@ from nltk.stem import WordNetLemmatizer
 from transformers import BasicTokenizer, BertTokenizer
 from glossary_eval import get_sr2terms
 import numpy as np
-#from stanfordnlp.server import CoreNLPClient
 
 wnl = WordNetLemmatizer()
 
@@ -32,8 +37,6 @@ ROOT = '/global/scratch/lucy3_li/ingroup_lang/'
 DATA = ROOT + 'data/'
 LOGS = ROOT + 'logs/'
 SR_FOLDER_MONTH = ROOT + 'subreddits_month/'
-SR_FOLDER = ROOT + 'subreddits/'
-SR_FOLDER2 = ROOT + 'subreddits2/'
 SUBREDDITS = DATA + 'subreddit_list.txt'
 REMOVED_SRS = DATA + 'non_english_sr.txt'
 AMRAMI_INPUT = '/global/scratch/lucy3_li/bertwsi/reddit_input/'
@@ -79,7 +82,7 @@ def get_comment(line):
 
 def get_comment_user(line): 
     """
-    Called by create_sr_user_docs() 
+    Called by create_subreddit_docs()
     @input: 
          - a dictionary containing a comment
     @output: 
@@ -92,27 +95,41 @@ def get_comment_user(line):
     return ((comment['subreddit'].lower(), comment['author'].lower()), text)
     
 def subreddit_of_interest(line): 
+    '''
+    Returns only subreddits in the set of reddits we want. 
+    '''
     comment = json.loads(line)
     return 'subreddit' in comment and 'body' in comment and \
         comment['subreddit'].lower() in reddits
             
 def get_subreddit(line): 
+    '''
+    Returns (subreddit, 1)
+    '''
     comment = json.loads(line)
     if 'subreddit' in comment and 'body' in comment and \
-	    comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
+        comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
         return (comment['subreddit'].lower(), 1)
     else: 
         return (None, 0)
 
 def get_subreddit_json(line): 
+    '''
+    Each comment is a json, but some jsons contain unwanted deleted comments. 
+    
+    Returns: (subreddit, json)
+    '''
     comment = json.loads(line) 
     if 'subreddit' in comment and 'body' in comment and \
-	    comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
+        comment['body'].strip() != '[deleted]' and comment['body'].strip() != '[removed]': 
         return (comment['subreddit'].lower(), [line])
     else: 
         return (None, [])
 
 def count_comments_for_one_subreddit(sr): 
+    '''
+    Output: Number of comments in subreddit sr
+    '''
     path = DATA + 'RC_all'
     data = sc.textFile(path)
     data = data.filter(lambda line: json.loads(line)['subreddit'].lower() == sr) 
@@ -120,13 +137,10 @@ def count_comments_for_one_subreddit(sr):
 
 def get_top_subreddits(n=300): 
     '''
-    Get the top n subreddits by number
-    of comments. 
-    Takes ~30 min for 1 month on redwood
-    using --master 'local[*]'
+    Get the top n subreddits by number of comments. 
+    Takes ~30 min for 1 month on redwood using --master 'local[*]'
     '''
     path = DATA + 'RC_all'
-    #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.map(get_subreddit)
     data = data.reduceByKey(lambda n1, n2: n1 + n2)
@@ -137,32 +151,31 @@ def get_top_subreddits(n=300):
             outfile.write(sr[0] + '\n') 
 
 def sample_lines(tup): 
+    '''
+    Called by create_subreddit_docs()
+    
+    Each subreddit has 80k comments (each line is a comment)
+    '''
     sr = tup[0]
     lines = tup[1]
     assert len(lines) >= 80000,"OH NO THE SUBREDDIT " + sr + \
-    	" IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
+        " IS TOO SMALL AND HAS ONLY " + str(len(lines)) + " LINES." 
     new_lines = random.sample(lines, 80000)
     return new_lines
             
 def save_doc(item): 
+    '''
+    Save each item (subreddit) as a document. 
+    '''
     if item[0] is not None:
         path = SR_FOLDER_MONTH + item[0] + '/'
         with open(path + 'RC_sample', 'w') as file:
             file.write(item[1].encode('utf-8', 'replace'))
-            
-def save_user_doc(item): 
-    sr = item[0][0]
-    user = item[0][1]
-    text = item[1]
-    if sr is not None:
-        path = SR_FOLDER + sr + '/'
-        with open(path + 'RC_sample_' + user, 'w') as file:
-            file.write(text.encode('utf-8', 'replace'))
     
 def create_subreddit_docs(): 
     '''
     Create a document for each subreddit by month
-    Lines that start with @@#USER#@@_ are usernames
+    Lines that start with USER1USER0USER are usernames
     whose comments on that subreddit then follow.
 
     The step after this is to move non-English subreddits
@@ -182,7 +195,6 @@ def create_subreddit_docs():
     logfile = open(LOGS + 'create_subreddit_docs.temp', 'w') 
     
     path = DATA + 'RC_all'
-    #path = DATA + 'tinyData'
     data = sc.textFile(path)
     data = data.filter(subreddit_of_interest)
     data = data.map(get_subreddit_json)  
@@ -198,93 +210,11 @@ def create_subreddit_docs():
     data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
     data = data.foreach(save_doc)
     logfile.close()
-    
-def create_sr_user_docs(): 
-    """
-    Creates one document per user per subreddit. 
-    It's possible that this method requires too much runtime
-    when it comes to I/O a gazillion tiny little docs while tokenizing. 
-    """
-    non_english_reddits = set()
-    with open(REMOVED_SRS, 'r') as inputfile: 
-        for line in inputfile: 
-            non_english_reddits.add(line.strip().lower())
-    with open(SUBREDDITS, 'r') as inputfile: 
-        for line in inputfile: 
-            sr = line.strip().lower()
-            if sr not in non_english_reddits: 
-                reddits.add(sr)
-    # create output folders
-    for sr in reddits: 
-        path = SR_FOLDER + sr + '/'
-        if not os.path.exists(path): 
-            os.makedirs(path)
-
-    path = DATA + 'RC_sample'
-    #path = DATA + 'tinyData'
-    data = sc.textFile(path)
-    data = data.filter(subreddit_of_interest)
-    data = data.map(get_comment_user)
-    data = data.reduceByKey(lambda n1, n2: n1 + '\n' + n2)
-    data = data.foreach(save_user_doc)
-    
-def process_comment(line): 
-    if line.strip().lower() == '[deleted]' or \
-        line.strip().lower() == '[removed]':
-        return ''
-    ann = client.annotate(line)
-    new_line = ''
-    for s in ann.sentence: 
-        for t in s.token: 
-            new_line += t.word.lower() + ' '
-    return new_line
-    
-def tokenize_docs(): 
-    """
-    Lowercases and tokenizes documents.
-    NOTE: Takes about as long as the non-Spark version so not being used. 
-    """
-    MONTH = 'RC_sample'
-    global client
-    client = CoreNLPClient(annotators=['tokenize','ssplit'], timeout=50000000, threads=18, memory='64G')
-    for folder_name in os.listdir(SR_FOLDER): 
-        if os.path.isdir(SR_FOLDER + folder_name):
-            path = SR_FOLDER + folder_name + '/' + MONTH
-            data = sc.textFile(path)
-            data = data.map(process_comment)
-            data.coalesce(1).saveAsTextFile(SR_FOLDER2 + folder_name)
-            break
-
-def sample_subreddits(): 
-    """
-    This function keeps getting killed
-    on both savio and redwood. 
-    """
-    with open(SUBREDDITS, 'r') as inputfile: 
-        for line in inputfile: 
-            sr = line.strip().lower()
-            reddits.add(sr)
-    random.seed(0)
-    path = DATA + "RC_all"
-    data = sc.textFile(path)
-    data = data.filter(subreddit_of_interest)
-    data = data.map(get_subreddit_json)  
-    data = data.reduceByKey(lambda n1, n2: n1 + n2) 
-    data = data.filter(lambda tup: tup[0] is not None)
-    data = data.map(sample_lines) 
-    sr_lines = data.collectAsMap()
-    outpath = DATA + "RC_sample"
-    outfile = open(outpath, 'w') 
-    for sr in sr_lines: 
-        if sr is None: continue
-        print("WRITING " + sr.upper() + " TO FILE") 
-        lines = sr_lines[sr]
-        print("NUMBER OF LINES:", len(lines))
-        for l in lines: 
-            outfile.write(l + '\n') 
-    outfile.close()
 
 def count_comments_all(): 
+    '''
+    This counts the number of comments per subreddit. 
+    '''
     with open(SUBREDDITS, 'r') as inputfile: 
         for line in inputfile: 
             sr = line.strip().lower()
@@ -298,22 +228,25 @@ def count_comments_all():
     c = Counter(data.collectAsMap())
     outfile = open(LOGS + "sr_comment_counts", 'w')
     for sr in c.most_common():
-       if sr[0] is None: continue 
-       outfile.write(sr[0] + '\t' + str(sr[1]) + '\n') 
+        if sr[0] is None: continue 
+        outfile.write(sr[0] + '\t' + str(sr[1]) + '\n') 
     outfile.close()
 
 def sentences_with_target_words(line, tokenizer=None, target_set=set()): 
+    '''
+    Used by filter_ukwac() to find sentences with target words in ukwac. 
+    '''
     sentences = sent_tokenize(line.strip()) 
     ret = []
     for s in sentences: 
-       tokens = set(tokenizer.tokenize(s.lower()))
-       for item in target_set: 
-           lemma = item.split('.')[0]
-           pos = item.split('.')[1]
-           if pos == 'j': pos = 'a' # adjective
-           for tok in tokens: 
-               if wnl.lemmatize(tok, pos) == lemma: 
-                   ret.append((lemma + '.' + pos, tok, s))
+        tokens = set(tokenizer.tokenize(s.lower()))
+        for item in target_set: 
+            lemma = item.split('.')[0]
+            pos = item.split('.')[1]
+            if pos == 'j': pos = 'a' # adjective
+            for tok in tokens: 
+                if wnl.lemmatize(tok, pos) == lemma: 
+                    ret.append((lemma + '.' + pos, tok, s))
     return ret
 
 def count_ukwac_lemmas(tup): 
@@ -327,12 +260,12 @@ def count_ukwac_lemmas(tup):
 
 def filter_ukwac(): 
     """
-    For every sentence
-    Only keep the ones in which a targeted lemma
-    appears. 
+    For every sentence, only keep the ones in which a targeted lemma appears. 
     Format it as 
     lemma \t target word \t sentence
     for easy BERT processing :)
+    
+    ukwac is the training data for the SemEval 2013 WSI task. 
     """
     directory = ROOT + 'SemEval-2013-Task-13-test-data/contexts/xml-format/'
     target_set = set()
@@ -359,6 +292,8 @@ def prep_finetuning_old():
     """
     Remove usernames, concatenate files together
     This was for use with Huggingface's run_lm_finetuning.py. 
+    
+    Our paper does not include the domain adapted model. 
     """
     rdds = []
     for folder in os.listdir(SR_FOLDER_MONTH): 
@@ -376,6 +311,8 @@ def prep_finetuning_old():
 def prep_finetuning_part1(): 
     """
     Output: a parquet where each cell is a comment 
+    
+    Our paper does not include the domain adapted model. 
     """
     rdds = []
     for folder in os.listdir(SR_FOLDER_MONTH): 
@@ -398,6 +335,8 @@ def prep_finetuning_part2():
     each cell is a single comment (or document)
     Output: a document where one sentence per line, 
     with documents separate by an additional newline.
+    
+    Our paper does not include the domain adapted model. 
     """
     test_df = sqlContext.read.parquet(LOGS + "finetune_input_test3/ssplit_test.parquet")
     test_num_sent = sum(test_df.rdd.map(lambda row: len(row.sen)).collect())
@@ -417,7 +356,12 @@ def prep_finetuning_part2():
 def est_finetuning_gloss_cov(): 
     """
     For words in subreddit glossaries, calculate how many times
-    they appear in the finetuning input 
+    they appear in the finetuning input. 
+    
+    This was used during domain adaptation to check that glossary words
+    are in fact being seen by the model. 
+    
+    Our paper does not include the domain adapted model. 
     """
     data = sc.textFile(LOGS + 'finetune_input_train2')
     sr2terms = get_sr2terms()
@@ -434,15 +378,6 @@ def est_finetuning_gloss_cov():
     print("------RESULT median # of examples per gloss word:", np.median(list(gloss_examples.values())))
     print("------RESULT avg # of examples per gloss word:", avg)
 
-def temp(): 
-    for i in range(100): 
-        data = sc.textFile(SR_FOLDER_MONTH + 'askreddit/RC_sample') 
-        data = data.flatMap(lambda line: [(w, 1) for w in line.split()])
-        data = data.reduceByKey(lambda n1, n2: n1 + n2)
-        data = data.collectAsMap()
-    print(len(data.keys()))
-    print("DONEEEE")  
-
 def divide_chunks(l, n): 
     # looping till length l 
     for i in range(0, len(l), n):  
@@ -450,7 +385,10 @@ def divide_chunks(l, n):
 
 def prep_finetuning2(num_epochs=3): 
     '''
-    Take the finetuning file, shuffle it three times and output as chunks
+    Take the finetuning input, shuffle it three times and output as chunks.
+    This was used to domain adapt (finetune) BERT to Reddit data, but we found that
+    this step did not improve results, so our paper does not include
+    the domain adapted model. 
     '''
     filename = LOGS + 'finetune_input_train/part-00000'
     print("Reading in file...") 
@@ -468,7 +406,10 @@ def prep_finetuning2(num_epochs=3):
             j += 1
 
 def get_vocab_word_instances(line, vocab=None):
-    # flatmap each comment to (vocab word, [comment])
+    '''
+    Used by sample_word_instances()
+    to get a flatmap from each comment to (vocab word, [comment])
+    '''
     tokenizer = BasicTokenizer(do_lower_case=True)
     line = line.strip()
     tokens = set(tokenizer.tokenize(line))
@@ -481,6 +422,14 @@ def get_vocab_word_instances(line, vocab=None):
     return ret 
 
 def sample_vocab_lines(tup): 
+    '''
+    This function samples words 500 times. 
+    It initially samples a larger number of words, 
+    but then removes cases where the examples have many
+    repetitions (such as comments written by bots). 
+    
+    Used by sample_word_instances()
+    '''
     w = tup[0]
     lines = tup[1]
     sample_num = 25000
@@ -522,6 +471,10 @@ def sample_vocab_lines(tup):
     return (w, new_instances)
 
 def save_vocab_instances_doc(tup, vocab=None): 
+    '''
+    This is used by sample_word_instances()
+    to write the output file. 
+    '''
     w = tup[0]
     lines = tup[1]
     with open(LOGS + 'vocabs/docs/' + str(vocab[w]), 'w') as outfile:
@@ -530,11 +483,11 @@ def save_vocab_instances_doc(tup, vocab=None):
 
 def sample_word_instances(): 
     '''
-    Since we only want to cluster 500 instances, 
-    we sample 500 instances. 
+    This function takes in a vocab file of words and samples 500 instances. 
     '''
     vocab_file = LOGS + 'vocabs/10_1_filtered'
     vocab = {} 
+    # map word to ID
     with open(vocab_file, 'r') as infile: 
         for i, line in enumerate(infile): 
             w = line.strip()
@@ -557,6 +510,13 @@ def sample_word_instances():
     sample_tups = sample_tups.foreach(partial(save_vocab_instances_doc, vocab=vocab))
 
 def tokenizer_check(): 
+    '''
+    This function was used to compare two tokenizers. 
+    
+    The main conclusion after Lucy ran this function was that
+    the BasicTokenizer is the BertTokenizer with the wordpieces
+    connected together. 
+    '''
     path = SR_FOLDER_MONTH + 'askreddit/RC_sample'
     data = sc.textFile(path)
     sample = data.takeSample(False, 100) 
@@ -570,30 +530,34 @@ def tokenizer_check():
         tokens3 = []
         ongoing_word = []
         for w in tokens2: 
-           if w.startswith('##'): 
-               if not prev_word.startswith('##'): 
-                   ongoing_word.append(prev_word)
-               ongoing_word.append(w[2:])
-           else: 
-               if len(ongoing_word) == 0 and prev_word is not None: 
-                   tokens3.append(prev_word)
-               elif prev_word is not None:
-                   tokens3.append(''.join(ongoing_word))
-               ongoing_word = []
-           prev_word = w
+            if w.startswith('##'): 
+                if not prev_word.startswith('##'): 
+                    ongoing_word.append(prev_word)
+                ongoing_word.append(w[2:])
+            else: 
+                if len(ongoing_word) == 0 and prev_word is not None: 
+                    tokens3.append(prev_word)
+                elif prev_word is not None:
+                    tokens3.append(''.join(ongoing_word))
+                ongoing_word = []
+            prev_word = w
         if len(ongoing_word) == 0 and prev_word is not None: 
-           tokens3.append(prev_word)
+            tokens3.append(prev_word)
         elif prev_word is not None: 
-           tokens3.append(''.join(ongoing_word))
+            tokens3.append(''.join(ongoing_word))
         if tokens3 != tokens1: 
-           print("OH NOOOOOOOOOO")
-           print(tokens1)
-           print(tokens3) 
-           success = False
+            print("OH NOOOOOOOOOO")
+            print(tokens1)
+            print(tokens3) 
+            success = False
     if success: 
         print("TOKENS MATCHED UP!")
 
 def get_all_examples_with_word(word): 
+    '''
+    This function gathers all examples that contain a word, 
+    to use as input to Amrami & Goldberg's model. 
+    '''
     rdds = []
     for folder in os.listdir(SR_FOLDER_MONTH): 
         path = SR_FOLDER_MONTH + folder + '/RC_sample'
@@ -609,14 +573,9 @@ def main():
     #get_top_subreddits(n=500)
     #create_subreddit_docs()
     #create_sr_user_docs() 
-    #prep_finetuning_part1()
-    #prep_finetuning_part2()
     #filter_ukwac()
     #temp()
-    #prep_finetuning2(num_epochs=3)
     #sample_word_instances()
-    get_all_examples_with_word('add')
-    #tokenizer_check()
     #est_finetuning_gloss_cov()
     sc.stop()
 
