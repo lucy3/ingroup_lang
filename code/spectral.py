@@ -1,4 +1,4 @@
-from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics.pairwise import euclidean_distances, pairwise_kernels
 from scipy.sparse import csgraph
 from sklearn.cluster import SpectralClustering
 from pyspark import SparkConf, SparkContext
@@ -27,22 +27,44 @@ def spectral_cluster(tup, semeval2010=False, rs=0, n_neighbors=8):
     lemma = tup[0]
     IDs = tup[1][0]
     data = tup[1][1]
-    connectivity = kneighbors_graph(data, n_neighbors=n_neighbors, include_self=True)
-    A = 0.5 * (connectivity + connectivity.T)
-    # compute Laplacian
-    L = csgraph.laplacian(A, normed=True).toarray()
-    # get smallest 10 eigenvalues of L, sorted by value smallest to largest
-    w, v = np.linalg.eig(L)
-    ev = sorted(w)[:10]
-    print("************* eigenvalues", lemma, ev)
-    gaps = []
-    for i in range(len(ev)-1): 
-        gaps.append(ev[i+1] - ev[i])
-    # eigengap
-    k = np.argmax(gaps) + 1
-    if k <= 1: 
-        k = 2 # set a lower bound
-    clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=0).fit(A)
+    if n_neighbors == 999:
+        # RBF Gaussian
+        params = {}
+        params['gamma'] = 1.0
+        params['degree'] = 3
+        params['coef0'] = 1
+        A = pairwise_kernels(data, metric='rbf',
+                                filter_params=True,
+                                **params) 
+        L = csgraph.laplacian(A, normed=True)
+        w, v = np.linalg.eig(L)
+        ev = sorted(w)[:10]
+        print("********* eigenvalues", lemma, ev)
+        gaps = []
+        for i in range(len(ev)-1): 
+            gaps.append(ev[i+1] - ev[i])
+        # eigengap
+        k = np.argmax(gaps) + 1
+        if k <= 1: 
+            k = 2 # set a lower bound
+        clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=rs, eigen_solver='lobpcg').fit(A)
+    else: 
+        # Nearest neighbor
+        connectivity = kneighbors_graph(data, n_neighbors=n_neighbors, include_self=True)
+        A = 0.5 * (connectivity + connectivity.T)
+        # compute Laplacian
+        L = csgraph.laplacian(A, normed=True).toarray()
+        # get smallest 10 eigenvalues of L, sorted by value smallest to largest
+        w, v = np.linalg.eig(L)
+        ev = sorted(w)[:10]
+        gaps = []
+        for i in range(len(ev)-1): 
+            gaps.append(ev[i+1] - ev[i])
+        # eigengap
+        k = np.argmax(gaps) + 1
+        if k <= 1: 
+            k = 2 # set a lower bound
+        clustering = SpectralClustering(n_clusters=k, affinity='precomputed', random_state=rs).fit(A)
     labels = clustering.labels_
     return (IDs, labels, data)
 
@@ -113,6 +135,8 @@ def semeval_match_nn(tup, semeval2010=True, rs=0, outname=None, n_neighbors=8):
     lemma = tup[0]
     IDs = tup[1][0]
     data = np.array(tup[1][1])
+    if not semeval2010: 
+        lemma = lemma.replace('.j', '.a')
     prefix = outname + lemma + '_' + str(rs) + '_' + str(n_neighbors)
     train_labels = []
     with open(prefix + '_trainlabels.txt', 'r') as infile: 
@@ -148,7 +172,7 @@ def semeval_cluster_test(semeval2010=True, rs=0, n_neighbors=8):
     data = None
     id_labels = out.collectAsMap()
     sc.stop()
-    with open(outname + 'semeval2010_clusters_' + str(rs) + '_' + str(n_neighbors), 'w') as outfile: 
+    with open(outname + 'semeval_clusters_' + str(rs) + '_' + str(n_neighbors), 'w') as outfile: 
         for ID in id_labels: 
             label = id_labels[ID]
             small_id = ID.split('_')[-3]
@@ -156,10 +180,10 @@ def semeval_cluster_test(semeval2010=True, rs=0, n_neighbors=8):
             outfile.write(lemma + ' ' + small_id + ' ' + lemma + str(label) + '\n')
 
 def main(): 
-    k = 9
-    for r in range(5): 
-        semeval_cluster_training(semeval2010=True, rs=r, n_neighbors=k)
-        semeval_cluster_test(semeval2010=True, rs=r, n_neighbors=k)
+    k = 7
+    for r in range(5):
+        semeval_cluster_training(semeval2010=False, rs=r, n_neighbors=k)
+        semeval_cluster_test(semeval2010=False, rs=r, n_neighbors=k)
 
 if __name__ == "__main__":
     main()
