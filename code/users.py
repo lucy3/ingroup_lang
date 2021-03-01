@@ -1,3 +1,8 @@
+"""
+Functions related to users, e.g. subscribers,
+user activity, user NPMI scores 
+"""
+
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SQLContext
 import json

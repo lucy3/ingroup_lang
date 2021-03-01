@@ -167,66 +167,10 @@ def get_data_old(sociolect_metric, cut_off, include_subs=False):
     X = zscore(X, axis=0)
     return X, y, y_bin, feature_names
 
-def predict_sociolects(sociolect_metric):
-    """
-    X is [community size, user activity, user loyalty, user density] 
-    where each row is a subreddit
-    y is # of high pmi words, # of high tf-idf words, or # of high pmi senses
-    """ 
-    X, y, y_bin, feature_names = get_data(sociolect_metric)
-    clf1 = LinearRegression(n_jobs=-1)
-    clf1.fit(X, y)
-    print("LINEAR REGRESSION")
-    print("Weights for features:")
-    for i, cf in enumerate(feature_names): 
-        print(cf, clf1.coef_[i])
-    clf2 = LinearRegression(n_jobs=-1) 
-    scores = cross_val_score(clf2, X, y, cv=3)
-    print("3-fold cv R^2", scores)
-    print("3-fold cv R^2 mean:", np.mean(scores))
-    print
-    clf7 = RandomForestRegressor(n_estimators=100, n_jobs=-1, random_state=0)
-    clf7.fit(X, y)
-    print("REGRESSION RF")
-    print("Weights for features:")
-    for i, cf in enumerate(feature_names): 
-        print(cf, clf7.feature_importances_[i])
-    clf8 = RandomForestRegressor(n_estimators=100, n_jobs=-1, random_state=0)
-    scores = cross_val_score(clf8, X, y, cv=3)
-    print("3-fold cv R^2", scores)
-    print("3-fold cv R^2 mean:", np.mean(scores))
-    print
-
-    clf3 = LogisticRegression(solver='liblinear')
-    clf3.fit(X, y_bin)
-    print("LOGISTIC REGRESSION")
-    print("Weights for features:")
-    for i, cf in enumerate(feature_names): 
-        print(cf, clf3.coef_[0,i])
-    clf4 = LogisticRegression() 
-    scores = cross_val_score(clf4, X, y_bin, cv=3, scoring='f1_macro')
-    print("3-fold cv F1", scores)
-    print("3-fold cv F1 mean:", np.mean(scores))
-    print
-
-    clf5 = RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=0)
-    clf5.fit(X, y_bin)
-    print("BINARY CLASSIFIER RF")
-    print("Weights for features:")
-    for i, cf in enumerate(feature_names): 
-        print(cf, clf5.feature_importances_[i])
-    clf6 = RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=0)
-    scores = cross_val_score(clf6, X, y_bin, cv=3, scoring='f1_macro')
-    print("3-fold cv F1", scores)
-    print("3-fold cv F1 mean:", np.mean(scores))
-
-    print("--------------------------")
-    print
-
-def predict_ols(): 
+def predict_ols(include_topics=False): 
     sense_cutoff = 0.17994827737953864
     type_cutoff = 0.3034868476499491
-    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=False, 
+    X, y, y_bin, feature_names = get_data(sense_cutoff, type_cutoff, ag=False, include_topics=include_topics, 
                                           factor_topics=False, include_subs=False)
     X_1 = sm.add_constant(X)
     model = sm.OLS(y, X_1)
@@ -284,86 +228,12 @@ def u_tests(sociolect_metric=None):
             run_u_test('subscriber ratio', feature_names.index('subscriber ratio'), X, y_bin, 'greater')
             run_u_test('subscribers', feature_names.index('subscribers'), X, y_bin, 'greater')
     
-def matching_subreddits(feature, matching_features, sociolect_metric): 
-    '''
-    Separate into "high" and "low" 
-    '''
-    print("Matching based on", matching_features, "to estimate effect of", \
-          feature, "on", sociolect_metric)
-    X, y, y_bin, feature_names = get_data(sociolect_metric)
-    print("Number of examples:", X.shape[0])
-    subset_features = matching_features + [feature]
-    idx = []
-    new_feature_names = []
-    for i in range(len(feature_names)): 
-        if feature_names[i] in subset_features: 
-            idx.append(i)
-            new_feature_names.append(feature_names[i])
-    idx = np.array(idx)
-    X = X[:,idx] # get only features we care about
-    y = y.reshape((y.shape[0], 1))
-    X = np.hstack((X, y)) # get y as well 
-    feature_idx = new_feature_names.index(feature)
-    vals = X[:,feature_idx]
-    middle = np.median(vals) 
-    # split into high and low values
-    print("Splitting", feature, "into control and treatment based on high/low...")
-    top_X = X[np.where(X[:,feature_idx] >= middle)]
-    bottom_X = X[np.where(X[:,feature_idx] < middle)]
-    top_buckets = defaultdict(list) # (feat1, feat2, ...) : [rows in that bucket]
-    bottom_buckets = defaultdict(list) # (feat1, feat2, ...) : [rows in that bucket]
-    #bucket_map = {'user activity': (lambda x: int(math.ceil(x / 10.0)) * 10), 
-    #              'user loyalty 50': (lambda x: round(x, 1)),
-    #              'commentor density': (lambda x: round(x, 2)),
-    #              'community size': (lambda x: int(math.log10(x)))
-    #        }
-    for i in range(top_X.shape[0]): 
-        arr = top_X[i]
-        bucket = []
-        for feat in sorted(matching_features): 
-            v = round(arr[new_feature_names.index(feat)], 1)
-            bucket.append(v)
-        top_buckets[tuple(bucket)].append(arr)
-    for i in range(bottom_X.shape[0]): 
-        arr = bottom_X[i]
-        bucket = []
-        for feat in sorted(matching_features): 
-            v = round(arr[new_feature_names.index(feat)], 1)
-            bucket.append(v)
-        bottom_buckets[tuple(bucket)].append(arr)
-    # for each key in top, see if key exists in bottom and match as many as we can
-    matches = []
-    print("Matching buckets...")
-    for key in top_buckets: 
-        if key in bottom_buckets: 
-            num_examples = min(len(top_buckets[key]), len(bottom_buckets[key]))
-            new_values = random.sample(top_buckets[key], num_examples) + \
-                random.sample(bottom_buckets[key], num_examples)
-            if num_examples == 1: 
-                print(new_values)
-            matches.extend(new_values)
-    new_X = np.array(matches)
-    y = new_X[:,-1]
-    new_X = new_X[:,:-1]
-    print("Number of examples", new_X.shape[0])
-    print("Running OLS...")
-    model = sm.OLS(y, new_X)
-    results = model.fit()
-    print(new_feature_names)
-    print(results.summary())
-
 def main(): 
-    #predict_sociolects('pmi')
-    #predict_sociolects('tfidf')
-    #predict_ols('pmi')
-    #predict_ols('tfidf')
-
     #u_tests('pmi')
     #u_tests('base_most_pmi')
     #u_tests()
 
     predict_ols()
-    #matching_subreddits('community size', ['user activity', 'user loyalty 50', 'commentor density'], 'pmi')
 
 if __name__ == "__main__":
     main()
