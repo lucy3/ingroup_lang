@@ -61,7 +61,9 @@ See requirements.txt for more details. Some code from early on in the project ma
 We used two months of data, May and June 2019, from [Pushshift's collection of Reddit comments](https://files.pushshift.io/reddit/comments/). 
 If you would like the sampled comments (80k per subreddit) that Lucy used, email her since they are too big for Github. 
 
-TODO: include links to semeval 2013 and semeval 2010 WSI datasets. 
+Download SemEval 2013 Task 13 data: [here](https://www.cs.york.ac.uk/semeval-2013/task13/). You should get a folder called "SemEval-2013-Task-13-test-data" that contains test data. 
+The ukwac corpus for training SemEval 2013 can be found [here](https://wacky.sslmit.unibo.it/doku.php?id=download), you may need to contact the owners to get a downloaded version. 
+Download SemEval 2010 Task 14 data: [here](https://www.cs.york.ac.uk/semeval2010_WSI/datasets.html). You should get a folder called "semeval-2010-task-14" that contains training and test data. 
 
 Subreddit glossaries, as csvs, are also in this folder. 
 
