@@ -2,8 +2,6 @@
 
 Code for the TACL paper, _Characterizing English Variation across Social Media Communities with BERT_. Citation forthcoming. 
 
-Lucy is currently adding comments and more information about this repo for easier use. 
-
 The name of this repository if "ingroup_lang" since it is about in-group language. 
 
 ### Package versions
