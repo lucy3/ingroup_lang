@@ -1,7 +1,7 @@
 """
-Comparison of our measurements
-of a word belonging to a sociolect
-to actual subreddit glossaries.
+Several functions looking at glossary words,
+whether they appear in the dataset, 
+whether they have scores computed for them
 """
 import csv
 from collections import Counter, defaultdict
@@ -91,7 +91,10 @@ def get_sr2terms_original():
             sr2terms[row['subreddit']].append(term)
     return sr2terms
 
-def total_recall(): 
+def total_recall():
+    '''
+    See how many glossary words have scores computed for them
+    ''' 
     sr2terms = get_sr2terms_no_mwes()
     # total possible recall of glossary words
     total_count = 0
@@ -113,119 +116,14 @@ def total_recall():
         total_count += len(gloss_terms)
     print(recall_count / total_count)
 
-def get_sr2terms(): 
+def get_sr2terms():
+    '''
+    Only load glossary words that appear in the dataset 
+    ''' 
     with open(ROOT + 'logs/existing_gloss_terms.json', 'r') as infile: 
         exist_gloss_terms = json.load(infile)
     return exist_gloss_terms 
         
-def compute_fscore(sr2terms, metric, score_cutoff, count_cutoff=0): 
-    '''
-    For multiword expressions, we tokenize these using
-    corenlp tokenizer. 
-    
-    recall - out of all glossary words, what fraction do we have?
-    precision - out of all words we have listed, how many are glossary words?
-    fscore
-    
-    we calculate these values for each subreddit and average them.
-    '''
-    if metric == 'tfidf': 
-        inpath = TFIDF_PATH
-    elif metric == 'pmi': 
-        inpath = PMI_PATH
-    elif metric == 'max_pmi': 
-        inpath = SENSEPMI_PATH 
-    elif metric == 'max_pmi2': 
-        inpath = BASE_SENSEPMI_PATH
-        metric = 'max_pmi'
-    elif metric == 'max_pmi3': 
-        inpath = DN_SENSEPMI_PATH
-        metric = 'max_pmi'
-    else: 
-        raise ValueError("Not implemented yet!")
-    rs = []
-    rs2 = []
-    ps = []
-    fs = []
-    print("Score cutoff =", score_cutoff, "| Count cutoff =", count_cutoff)
-    log_file = open(SCORE_LOG + metric + '_' + str(score_cutoff) + '_' + str(count_cutoff), 'w')
-    log_file.write("subreddit recall recall2 precision f1\n")
-    for subreddit_file in os.listdir(inpath): 
-        if not subreddit_file.endswith('.csv'): continue
-        subreddit_name = subreddit_file.replace('_0.2.csv', '').replace('.csv', '')
-        if subreddit_name not in sr2terms: continue
-        sociolect_words = set() 
-        all_sociolect_words = set()
-        with open(inpath + subreddit_file, 'r') as infile: 
-            reader = csv.DictReader(infile, delimiter=',')
-            for row in reader: 
-                all_sociolect_words.add(row['word'])
-                if float(row[metric]) > score_cutoff and int(row['count']) > count_cutoff: 
-                    sociolect_words.add(row['word'])
-        num_gloss_words = len(sr2terms[subreddit_name])
-        num_gloss_words_in_list = len(set(sr2terms[subreddit_name]) & all_sociolect_words)
-        num_our_list = len(sociolect_words)
-        overlap = len(set(sr2terms[subreddit_name]) & sociolect_words)
-        recall = overlap / float(num_gloss_words)
-        if num_gloss_words_in_list > 0: 
-            recall2 = overlap / float(num_gloss_words_in_list)
-        else: 
-            recall2 = 0
-        if num_our_list > 0: 
-            precision = overlap / float(num_our_list)
-        else: 
-            precision = 0
-        if (recall2 + precision) > 0: 
-            f1 = 2*precision*recall2/(recall2 + precision)
-        else: 
-            f1 = 0
-        log_file.write(subreddit_name + ' ' + str(recall) + ' ' + \
-            str(recall2) + ' ' + str(precision) + ' ' + str(f1) + '\n') 
-        rs.append(recall)
-        rs2.append(recall2)
-        ps.append(precision)
-        fs.append(f1)
-    r = np.mean(rs)
-    r2 = np.mean(rs2)
-    p = np.mean(ps)
-    f = np.mean(fs)
-    log_file.close()
-    print("Recall:", r)
-    print("Recall2:", r2)
-    print("Precision:", p)
-    print("F1 score:", f)
-    return r2, p, f
-
-def find_best_parameters_helper(sr2terms, metric, cutoff_list): 
-    best = None
-    best_score = 0
-    f_list = []
-    for cutoff in cutoff_list: 
-        r, p, f = compute_fscore(sr2terms, metric, cutoff)
-        f_list.append(f)
-        if f > best_score: 
-            best_score = f
-            best = (metric, cutoff, r, p, f)
-    print("BEST PARAMS (metric, cutoff, recall, precision, f1 score):")
-    print(best)
-    plt.scatter(cutoff_list, f_list)
-    plt.savefig(ROOT + 'logs/' + metric+'_glossary_f1.png')
-    plt.close()
-
-def find_best_parameters():
-    sr2terms = get_sr2terms() 
-    '''
-    find_best_parameters_helper(sr2terms, 'tfidf', [0, 1, 2, 3, 4, 5, 6, 7, 8])
-    find_best_parameters_helper(sr2terms, 'pmi', [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, \
-                  0.8, 0.9])
-    find_best_parameters_helper(sr2terms, 'max_pmi', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
-                   0.6, 0.7, 0.8, 0.9])
-    find_best_parameters_helper(sr2terms, 'max_pmi2', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
-                   0.6, 0.7, 0.8, 0.9])
-    '''
-    find_best_parameters_helper(sr2terms, 'max_pmi3', [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, \
-                   0.6, 0.7, 0.8, 0.9])
-
 def sense_vocab_coverage(): 
     sr2terms = get_sr2terms()
     sense_vocab_path = ROOT + 'logs/sr_sense_vocab/'
@@ -326,12 +224,10 @@ def sanity_check_gloss_words():
                 print(sr, term)
 
 def main(): 
-    #basic_stats()
-    #find_best_parameters()
+    basic_stats()
     #sense_vocab_coverage()
     #count_exact_string_matches()
     #compare_gloss_dicts()
-    total_recall()
     #sanity_check_gloss_words()
 
 if __name__ == '__main__':
