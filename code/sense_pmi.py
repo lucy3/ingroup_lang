@@ -1,3 +1,6 @@
+'''
+Compute normalized sense pmi 
+'''
 ## Python 2.7
 #from pyspark import SparkConf, SparkContext
 #from pyspark.sql import SQLContext
@@ -13,25 +16,13 @@ import numpy as np
 ROOT = '/mnt/data0/lucy/ingroup_lang/'
 LOG_DIR = ROOT + 'logs/'
 METRIC = 'ag'
-if METRIC == 'finetuned':  
-    PMI_DIR = LOG_DIR + 'finetuned_sense_pmi/'
-    MAX_PMI_DIR = LOG_DIR + 'ft_max_sense_pmi/'
-    SENSE_DIR = LOG_DIR + 'finetuned_senses/'
-    ALL_SENSES = LOG_DIR + 'ft_total_sense_counts.json'
-    SUB_TOTALS = LOG_DIR + 'ft_sr_totals.json' 
-elif METRIC == 'bert-base':
+if METRIC == 'bert-base':
     PMI_DIR = LOG_DIR + 'base_sense_pmi/'
     MAX_PMI_DIR = LOG_DIR + 'base_max_sense_pmi/'
     MOST_PMI_DIR = LOG_DIR + 'base_most_sense_pmi/'
     SENSE_DIR = LOG_DIR + 'senses/'
     ALL_SENSES = LOG_DIR + 'base_total_sense_counts.json'
     SUB_TOTALS = LOG_DIR + 'base_sr_totals.json' 
-elif METRIC == 'denoised': 
-    PMI_DIR = LOG_DIR + 'denoised_sense_pmi/' 
-    MAX_PMI_DIR = LOG_DIR + 'dn_max_sense_pmi/'
-    SENSE_DIR = LOG_DIR + 'finetuned_senses/'
-    ALL_SENSES = LOG_DIR + 'dn_total_sense_counts.json'
-    SUB_TOTALS = LOG_DIR + 'dn_sr_totals.json'
 elif METRIC == 'ag': 
     PMI_DIR = LOG_DIR + 'ag_sense_pmi/' 
     MAX_PMI_DIR = LOG_DIR + 'ag_max_sense_pmi/'
@@ -51,30 +42,6 @@ def user_sense(line):
     user = contents[0].split('_')[1]
     sense = contents[1] + '#####' + contents[2]
     return ((user, sense), 1) 
-
-def count_overall_senses_denoised(): 
-    '''
-    The bottom fraction only contains counts totals for the top 10 subreddits
-    '''
-    log_file = open(LOG_DIR + 'counting_senses_log.temp', 'w') 
-    all_counts = defaultdict(list) 
-    for filename in sorted(os.listdir(SENSE_DIR)): 
-       log_file.write(filename + '\n') 
-       data = sc.textFile(SENSE_DIR + filename) 
-       data = data.map(user_sense)
-       data = data.reduceByKey(lambda n1, n2: 1)
-       data = data.map(lambda tup: (tup[0][1], 1))
-       data = data.reduceByKey(lambda n1, n2: n1 + n2)
-       d = Counter(data.collectAsMap())
-       for w in d: 
-           all_counts[w].append(d[w])
-    summed_counts = Counter()
-    for w in all_counts: 
-       counts = sum(sorted(all_counts[w], reverse=True)[:10])
-       summed_counts[w] = counts
-    with open(ALL_SENSES, 'w') as outfile: 
-       json.dump(summed_counts, outfile)
-    log_file.close()
 
 def count_overall_senses(): 
     '''
@@ -206,28 +173,9 @@ def calc_most_pmi():
            for row in zipped: 
                writer.writerow([row[1], str(row[0]), str(row[2])])
 
-def calc_max_pmi(): 
-    '''
-    For each file in PMI_DIR, get max sense pmi
-    '''
-    for filename in tqdm.tqdm(sorted(os.listdir(PMI_DIR))): 
-        scores = defaultdict(list) # word : [list of scores]
-        counts = Counter() # word : count
-        with open(PMI_DIR + filename, 'r') as infile: 
-            reader = csv.DictReader(infile)
-            for row in reader: 
-                word = row['sense'].split('#####')[0]
-                scores[word].append(float(row['pmi']))
-                counts[word] += int(row['count'])
-        with open(MAX_PMI_DIR + filename, 'w') as outfile: 
-            writer = csv.writer(outfile)
-            writer.writerow(['word', 'max_pmi', 'count'])
-            for word in scores: 
-                writer.writerow([word, str(max(scores[word])), str(counts[word])])
-
 def main(): 
-    #count_overall_senses()
-    #calculate_pmi()
+    count_overall_senses()
+    calculate_pmi()
     
     #inspect_word('cubes', 'azurelane')
     #inspect_word('hesitation', 'sekiro')
@@ -245,10 +193,9 @@ def main():
     #inspect_word('associates')
     #inspect_word('spark')
     #inspect_word('haul', subreddit='fashionreps')
-    inspect_word('.')
+    #inspect_word('.')
 
-    #calc_max_pmi()
-    #calc_most_pmi()
+    calc_most_pmi()
     #sc.stop()
 
 if __name__ == '__main__':
