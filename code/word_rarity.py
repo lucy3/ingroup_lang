@@ -1,3 +1,6 @@
+"""
+PMI, NPMI, JSD, tf-idf
+"""
 # get word counts in each subreddit 
 # Python 2.7
 import os
@@ -285,11 +288,11 @@ def js_divergence(percent_param=0.2):
 
 
 def main(): 
-    #count_words()
-    #count_overall_words()
+    count_words()
+    count_overall_words()
     #calculate_pmi()
-    #calculate_normalized_pmi()
-    js_divergence()
+    calculate_normalized_pmi()
+    #js_divergence()
     #count_document_freq()
     #word_tfidf()
     sc.stop()
