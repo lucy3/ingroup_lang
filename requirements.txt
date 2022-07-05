@@ -236,7 +236,7 @@ tornado==6.0.3
 tqdm==4.40.0
 traitlets==4.3.3
 transformers==3.3.1
-ujson==1.35
+ujson==5.4.0
 unicodecsv==0.14.1
 urllib3==1.25.7
 wasabi==0.8.0
