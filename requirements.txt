@@ -43,7 +43,7 @@ dask==2.9.0
 decorator==4.4.1
 defusedxml==0.6.0
 diff-match-patch==20181111
-distributed==2.9.0
+distributed==2021.10.0
 docutils==0.15.2
 en-core-web-sm==2.3.1
 entrypoints==0.3
